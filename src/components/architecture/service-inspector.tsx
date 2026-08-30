@@ -309,6 +309,13 @@ export function ServiceInspector({
               checked={service.sensitiveData}
               onChange={(checked) => onChange("sensitiveData", checked)}
             />
+            {service.type === "database" || service.type === "storage" ? (
+              <InspectorToggle
+                label="Encryption at rest"
+                checked={service.encryptionAtRest ?? false}
+                onChange={(checked) => onChange("encryptionAtRest", checked)}
+              />
+            ) : null}
             <InspectorField
               label="Data classification"
               htmlFor="service-data-classification"
