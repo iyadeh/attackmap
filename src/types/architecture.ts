@@ -33,6 +33,13 @@ export type DataClassification =
 
 export type ServiceProtocol = "https" | "tcp_tls";
 
+export type ConnectionProtocol =
+  | "https"
+  | "http"
+  | "grpc"
+  | "tcp"
+  | "websocket";
+
 export type ServiceNode = {
   id: string;
   name: string;
@@ -46,4 +53,12 @@ export type ServiceNode = {
   rateLimiting: boolean;
   sensitiveData: boolean;
   dataClassification: DataClassification;
+};
+
+export type ServiceConnection = {
+  id: string;
+  source: string;
+  target: string;
+  protocol: ConnectionProtocol;
+  encrypted: boolean;
 };

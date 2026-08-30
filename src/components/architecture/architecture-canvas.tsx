@@ -1,12 +1,15 @@
+import { useMemo } from "react";
 import {
   Background,
   BackgroundVariant,
   Controls,
+  MarkerType,
   ReactFlow,
   type Edge,
   type OnNodesChange,
 } from "@xyflow/react";
-import type { ServiceNode } from "@/types/architecture";
+import { getConnectionLabel } from "@/lib/architecture/connection-factory";
+import type { ServiceConnection, ServiceNode } from "@/types/architecture";
 import {
   ServiceModelContext,
   serviceNodeTypes,
@@ -16,20 +19,41 @@ import {
 type ArchitectureCanvasProps = {
   servicesById: ReadonlyMap<string, ServiceNode>;
   nodes: ArchitectureNode[];
-  edges: Edge[];
+  connections: ServiceConnection[];
+  selectedConnectionId: string | null;
   onNodesChange: OnNodesChange<ArchitectureNode>;
   onSelectService: (serviceId: string) => void;
+  onSelectConnection: (connectionId: string) => void;
+  onCreateConnection: (source: string, target: string) => void;
   onClearSelection: () => void;
 };
 
 export function ArchitectureCanvas({
   servicesById,
   nodes,
-  edges,
+  connections,
+  selectedConnectionId,
   onNodesChange,
   onSelectService,
+  onSelectConnection,
+  onCreateConnection,
   onClearSelection,
 }: ArchitectureCanvasProps) {
+  const edges = useMemo<Edge[]>(
+    () =>
+      connections.map((connection) => ({
+        id: connection.id,
+        source: connection.source,
+        target: connection.target,
+        label: getConnectionLabel(connection),
+        labelBgPadding: [5, 2],
+        labelBgBorderRadius: 0,
+        markerEnd: { type: MarkerType.ArrowClosed, color: "#82827b" },
+        selected: connection.id === selectedConnectionId,
+      })),
+    [connections, selectedConnectionId],
+  );
+
   return (
     <section
       aria-label="Architecture canvas"
@@ -45,7 +69,7 @@ export function ArchitectureCanvas({
         <div className="flex items-center gap-3 font-mono text-[9px] text-[#777770]">
           <span>{servicesById.size} services</span>
           <span className="h-3 w-px bg-[#deded8]" />
-          <span>{edges.length} connections</span>
+          <span>{connections.length} connections</span>
         </div>
       </div>
 
@@ -57,11 +81,28 @@ export function ArchitectureCanvas({
             nodeTypes={serviceNodeTypes}
             onNodesChange={onNodesChange}
             onNodeClick={(_, node) => onSelectService(node.id)}
+            onEdgeClick={(_, edge) => onSelectConnection(edge.id)}
+            onConnect={(connection) => {
+              if (connection.source && connection.target) {
+                onCreateConnection(connection.source, connection.target);
+              }
+            }}
+            isValidConnection={(connection) =>
+              connection.source !== connection.target &&
+              servicesById.has(connection.source) &&
+              servicesById.has(connection.target) &&
+              !connections.some(
+                (existingConnection) =>
+                  existingConnection.source === connection.source &&
+                  existingConnection.target === connection.target,
+              )
+            }
             onPaneClick={onClearSelection}
-            nodesConnectable={false}
+            nodesConnectable
             edgesFocusable={false}
             edgesReconnectable={false}
             deleteKeyCode={null}
+            connectionLineStyle={{ stroke: "#888881", strokeWidth: 1.4 }}
             minZoom={0.4}
             maxZoom={1.5}
             fitView

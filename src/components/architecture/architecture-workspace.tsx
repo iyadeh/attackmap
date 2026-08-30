@@ -4,14 +4,23 @@ import { useMemo, useRef, useState } from "react";
 import { useNodesState } from "@xyflow/react";
 import { Graph } from "@phosphor-icons/react";
 import {
+  canCreateServiceConnection,
+  createServiceConnection,
+  getEncryptionAfterProtocolChange,
+} from "@/lib/architecture/connection-factory";
+import {
   createService,
   type CreatableServiceType,
 } from "@/lib/architecture/service-factory";
-import type { ServiceNode } from "@/types/architecture";
+import type {
+  ConnectionProtocol,
+  ServiceNode,
+} from "@/types/architecture";
 import { ArchitectureCanvas } from "./architecture-canvas";
 import { ComponentPalette } from "./component-palette";
+import { ConnectionInspector } from "./connection-inspector";
 import {
-  initialEdges,
+  initialConnections,
   initialNodes,
   initialServices,
 } from "./mock-architecture";
@@ -35,11 +44,15 @@ export function ArchitectureWorkspace() {
   const [services, setServices] = useState<ServiceNode[]>(initialServices);
   const [nodes, setNodes, onNodesChange] =
     useNodesState<ArchitectureNode>(initialNodes);
-  const [edges, setEdges] = useState(initialEdges);
+  const [connections, setConnections] = useState(initialConnections);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
     "api-gateway",
   );
+  const [selectedConnectionId, setSelectedConnectionId] = useState<
+    string | null
+  >(null);
   const nextServiceSequence = useRef(initialServices.length + 1);
+  const nextConnectionSequence = useRef(initialConnections.length + 1);
   const nextPlacementIndex = useRef(0);
 
   const servicesById = useMemo(
@@ -49,6 +62,15 @@ export function ArchitectureWorkspace() {
   const selectedService = selectedServiceId
     ? (servicesById.get(selectedServiceId) ?? null)
     : null;
+  const selectedConnection = selectedConnectionId
+    ? (connections.find(
+        (connection) => connection.id === selectedConnectionId,
+      ) ?? null)
+    : null;
+  const serviceIds = useMemo(
+    () => new Set(servicesById.keys()),
+    [servicesById],
+  );
 
   const updateSelectedService: ServiceChangeHandler = (field, value) => {
     if (!selectedServiceId) {
@@ -96,20 +118,122 @@ export function ArchitectureWorkspace() {
   }
 
   function deleteService(serviceId: string) {
+    const selectedConnectionIsIncident = connections.some(
+      (connection) =>
+        connection.id === selectedConnectionId &&
+        (connection.source === serviceId || connection.target === serviceId),
+    );
+
     setServices((currentServices) =>
       currentServices.filter((service) => service.id !== serviceId),
     );
     setNodes((currentNodes) =>
       currentNodes.filter((node) => node.id !== serviceId),
     );
-    setEdges((currentEdges) =>
-      currentEdges.filter(
-        (edge) => edge.source !== serviceId && edge.target !== serviceId,
+    setConnections((currentConnections) =>
+      currentConnections.filter(
+        (connection) =>
+          connection.source !== serviceId && connection.target !== serviceId,
       ),
     );
     setSelectedServiceId((currentSelection) =>
       currentSelection === serviceId ? null : currentSelection,
     );
+    if (selectedConnectionIsIncident) {
+      setSelectedConnectionId(null);
+    }
+  }
+
+  function addConnection(source: string, target: string) {
+    if (
+      !canCreateServiceConnection(
+        source,
+        target,
+        serviceIds,
+        connections,
+      )
+    ) {
+      return;
+    }
+
+    let sequence = nextConnectionSequence.current;
+    let connection = createServiceConnection(source, target, sequence);
+
+    while (
+      connections.some(
+        (existingConnection) => existingConnection.id === connection.id,
+      )
+    ) {
+      sequence += 1;
+      connection = createServiceConnection(source, target, sequence);
+    }
+
+    nextConnectionSequence.current = sequence + 1;
+    setConnections((currentConnections) => [
+      ...currentConnections,
+      connection,
+    ]);
+  }
+
+  function deleteConnection(connectionId: string) {
+    setConnections((currentConnections) =>
+      currentConnections.filter(
+        (connection) => connection.id !== connectionId,
+      ),
+    );
+    setSelectedConnectionId((currentSelection) =>
+      currentSelection === connectionId ? null : currentSelection,
+    );
+  }
+
+  function updateSelectedConnectionProtocol(protocol: ConnectionProtocol) {
+    if (!selectedConnectionId) {
+      return;
+    }
+
+    setConnections((currentConnections) =>
+      currentConnections.map((connection) =>
+        connection.id === selectedConnectionId
+          ? {
+              ...connection,
+              protocol,
+              encrypted: getEncryptionAfterProtocolChange(
+                protocol,
+                connection.encrypted,
+              ),
+            }
+          : connection,
+      ),
+    );
+  }
+
+  function updateSelectedConnectionEncryption(encrypted: boolean) {
+    if (!selectedConnectionId) {
+      return;
+    }
+
+    setConnections((currentConnections) =>
+      currentConnections.map((connection) =>
+        connection.id === selectedConnectionId
+          ? { ...connection, encrypted }
+          : connection,
+      ),
+    );
+  }
+
+  function selectService(serviceId: string) {
+    setSelectedServiceId(serviceId);
+    setSelectedConnectionId(null);
+  }
+
+  function selectConnection(connectionId: string) {
+    setSelectedConnectionId(connectionId);
+    setSelectedServiceId(null);
+  }
+
+  function clearSelection() {
+    setSelectedServiceId(null);
+    setSelectedConnectionId(null);
   }
 
   return (
@@ -149,17 +273,38 @@ export function ArchitectureWorkspace() {
         <ArchitectureCanvas
           servicesById={servicesById}
           nodes={nodes}
-          edges={edges}
+          connections={connections}
+          selectedConnectionId={selectedConnectionId}
           onNodesChange={onNodesChange}
-          onSelectService={setSelectedServiceId}
-          onClearSelection={() => setSelectedServiceId(null)}
+          onSelectService={selectService}
+          onSelectConnection={selectConnection}
+          onCreateConnection={addConnection}
+          onClearSelection={clearSelection}
         />
-        <ServiceInspector
-          key={selectedService?.id ?? "no-selection"}
-          service={selectedService}
-          onChange={updateSelectedService}
-          onDelete={deleteService}
-        />
+        {selectedConnection ? (
+          <ConnectionInspector
+            key={selectedConnection.id}
+            connection={selectedConnection}
+            sourceName={
+              servicesById.get(selectedConnection.source)?.name ??
+              "Missing service"
+            }
+            targetName={
+              servicesById.get(selectedConnection.target)?.name ??
+              "Missing service"
+            }
+            onProtocolChange={updateSelectedConnectionProtocol}
+            onEncryptedChange={updateSelectedConnectionEncryption}
+            onDelete={deleteConnection}
+          />
+        ) : (
+          <ServiceInspector
+            key={selectedService?.id ?? "no-selection"}
+            service={selectedService}
+            onChange={updateSelectedService}
+            onDelete={deleteService}
+          />
+        )}
       </div>
     </main>
   );

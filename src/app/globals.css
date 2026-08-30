@@ -61,6 +61,11 @@ button,
   stroke-width: 1.4;
 }
 
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #3f3f3b;
+  stroke-width: 1.8;
+}
+
 .react-flow__edge-text {
   fill: #565651;
   font-family: var(--font-geist-mono), monospace;

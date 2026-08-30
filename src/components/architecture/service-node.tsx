@@ -96,8 +96,8 @@ function ServiceNodeComponent({ data, selected }: NodeProps<ArchitectureNode>) {
       <Handle
         type="target"
         position={Position.Left}
-        isConnectable={false}
-        className="!h-2 !w-2 !border-2 !border-white !bg-[#85857e]"
+        isConnectable
+        className="!h-2 !w-2 !cursor-crosshair !border-2 !border-white !bg-[#85857e]"
       />
 
       <div className="flex items-center gap-2.5 border-b border-[#e9e9e4] px-3 py-3">
@@ -129,8 +129,8 @@ function ServiceNodeComponent({ data, selected }: NodeProps<ArchitectureNode>) {
       <Handle
         type="source"
         position={Position.Right}
-        isConnectable={false}
-        className="!h-2 !w-2 !border-2 !border-white !bg-[#85857e]"
+        isConnectable
+        className="!h-2 !w-2 !cursor-crosshair !border-2 !border-white !bg-[#85857e]"
       />
     </div>
   );

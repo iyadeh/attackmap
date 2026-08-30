@@ -1,5 +1,4 @@
-import { MarkerType, type Edge } from "@xyflow/react";
-import type { ServiceNode } from "@/types/architecture";
+import type { ServiceConnection, ServiceNode } from "@/types/architecture";
 import type { ArchitectureNode } from "./service-node";
 
 export const initialServices: ServiceNode[] = [
@@ -89,32 +88,26 @@ export const initialNodes: ArchitectureNode[] = [
   },
 ];
 
-export const initialEdges: Edge[] = [
+export const initialConnections: ServiceConnection[] = [
   {
     id: "web-to-gateway",
     source: "web-application",
     target: "api-gateway",
-    label: "HTTPS",
-    labelBgPadding: [5, 2],
-    labelBgBorderRadius: 0,
-    markerEnd: { type: MarkerType.ArrowClosed, color: "#82827b" },
+    protocol: "https",
+    encrypted: true,
   },
   {
     id: "gateway-to-api",
     source: "api-gateway",
     target: "rest-api",
-    label: "HTTPS",
-    labelBgPadding: [5, 2],
-    labelBgBorderRadius: 0,
-    markerEnd: { type: MarkerType.ArrowClosed, color: "#82827b" },
+    protocol: "https",
+    encrypted: true,
   },
   {
     id: "api-to-database",
     source: "rest-api",
     target: "postgresql",
-    label: "TCP/TLS",
-    labelBgPadding: [5, 2],
-    labelBgBorderRadius: 0,
-    markerEnd: { type: MarkerType.ArrowClosed, color: "#82827b" },
+    protocol: "tcp",
+    encrypted: true,
   },
 ];
