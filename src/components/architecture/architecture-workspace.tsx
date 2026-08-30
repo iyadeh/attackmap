@@ -13,11 +13,13 @@ import {
   type CreatableServiceType,
 } from "@/lib/architecture/service-factory";
 import { analyzeArchitecture } from "@/lib/risk-engine/engine";
+import { calculateSecurityScore } from "@/lib/risk-engine/scoring";
 import type {
   ConnectionProtocol,
   ServiceNode,
 } from "@/types/architecture";
 import { FindingsView } from "../findings/findings-view";
+import { SecurityScoreStatus } from "../findings/security-score-status";
 import { ArchitectureCanvas } from "./architecture-canvas";
 import { ComponentPalette } from "./component-palette";
 import { ConnectionInspector } from "./connection-inspector";
@@ -79,6 +81,10 @@ export function ArchitectureWorkspace() {
   const findings = useMemo(
     () => analyzeArchitecture(services, connections),
     [connections, services],
+  );
+  const securityScore = useMemo(
+    () => calculateSecurityScore(findings),
+    [findings],
   );
 
   const updateSelectedService: ServiceChangeHandler = (field, value) => {
@@ -265,6 +271,8 @@ export function ArchitectureWorkspace() {
           </span>
         </div>
 
+        <SecurityScoreStatus result={securityScore} />
+
         <nav
           aria-label="Project sections"
           className="flex h-full items-center gap-5 px-3"
@@ -345,6 +353,7 @@ export function ArchitectureWorkspace() {
           findings={findings}
           services={services}
           connections={connections}
+          securityScore={securityScore}
         />
       ) : null}
     </main>

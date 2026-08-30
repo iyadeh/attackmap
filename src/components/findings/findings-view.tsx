@@ -1,11 +1,16 @@
 import { useMemo, useState } from "react";
 import type { ServiceConnection, ServiceNode } from "@/types/architecture";
-import type { Finding, FindingSeverity } from "@/types/security";
+import type {
+  Finding,
+  FindingSeverity,
+  SecurityScoreResult,
+} from "@/types/security";
 
 type FindingsViewProps = {
   findings: readonly Finding[];
   services: readonly ServiceNode[];
   connections: readonly ServiceConnection[];
+  securityScore: SecurityScoreResult;
 };
 
 type FindingContext = {
@@ -85,25 +90,14 @@ function getFindingTargetLabel(
   return "Architecture";
 }
 
-function SeveritySummary({ findings }: { findings: readonly Finding[] }) {
-  const counts: Record<FindingSeverity, number> = {
-    critical: 0,
-    high: 0,
-    medium: 0,
-    low: 0,
-  };
-
-  for (const finding of findings) {
-    counts[finding.severity] += 1;
-  }
-
+function SeveritySummary({ result }: { result: SecurityScoreResult }) {
   return (
     <div
       aria-label="Finding severity breakdown"
       aria-live="polite"
       className="flex items-center gap-3 font-mono text-[9px]"
     >
-      <span className="text-[#5f5f59]">{findings.length} total</span>
+      <span className="text-[#5f5f59]">{result.totalFindings} total</span>
       <span className="h-3 w-px bg-[#deded8]" />
       {severityOrder.map((severity) => {
         const presentation = severityPresentation[severity];
@@ -115,7 +109,9 @@ function SeveritySummary({ findings }: { findings: readonly Finding[] }) {
             >
               {presentation.label}
             </span>
-            <span className="text-[#5f5f59]">{counts[severity]}</span>
+            <span className="text-[#5f5f59]">
+              {result.severityCounts[severity]}
+            </span>
           </span>
         );
       })}
@@ -285,6 +281,7 @@ export function FindingsView({
   findings,
   services,
   connections,
+  securityScore,
 }: FindingsViewProps) {
   const [selectedFindingId, setSelectedFindingId] = useState<string | null>(
     null,
@@ -317,7 +314,7 @@ export function FindingsView({
             Live model analysis
           </p>
         </div>
-        <SeveritySummary findings={findings} />
+        <SeveritySummary result={securityScore} />
       </div>
 
       {selectedFinding ? (

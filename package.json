@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsc --project tsconfig.test.json && node --test .next/risk-tests/lib/risk-engine/engine.test.js"
+    "test": "tsc --project tsconfig.test.json && node --test .next/risk-tests/lib/risk-engine/engine.test.js .next/risk-tests/lib/risk-engine/scoring.test.js"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

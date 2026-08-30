@@ -1,5 +1,21 @@
 export type FindingSeverity = "critical" | "high" | "medium" | "low";
 
+export type SecurityScoreCategory =
+  | "strong"
+  | "good"
+  | "moderate"
+  | "high-risk"
+  | "critical-risk";
+
+export type SeverityCounts = Record<FindingSeverity, number>;
+
+export type SecurityScoreResult = {
+  score: number;
+  category: SecurityScoreCategory;
+  totalFindings: number;
+  severityCounts: SeverityCounts;
+};
+
 export type Finding = {
   id: string;
   ruleId: string;
