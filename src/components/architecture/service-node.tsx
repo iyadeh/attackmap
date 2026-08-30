@@ -19,9 +19,10 @@ import type { ServiceNode, ServiceType } from "@/types/architecture";
 
 export type ArchitectureNodeData = { serviceId: string };
 export type ArchitectureNode = Node<ArchitectureNodeData, "service">;
-export type ServiceIconType = ServiceType | "internet";
+export type ServiceIconType = ServiceType;
 
 export const serviceTypeLabels: Record<ServiceType, string> = {
+  internet: "Internet",
   web: "Web application",
   mobile: "Mobile application",
   api: "API",

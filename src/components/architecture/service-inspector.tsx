@@ -1,5 +1,5 @@
 import { ShieldCheck } from "@phosphor-icons/react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type {
   AuthenticationMethod,
   AuthorizationModel,
@@ -20,6 +20,7 @@ export type ServiceChangeHandler = <Field extends EditableServiceField>(
 type ServiceInspectorProps = {
   service: ServiceNode | null;
   onChange: ServiceChangeHandler;
+  onDelete: (serviceId: string) => void;
 };
 
 const serviceTypeOptions = Object.entries(serviceTypeLabels) as [
@@ -145,7 +146,10 @@ function InspectorToggle({
 export function ServiceInspector({
   service,
   onChange,
+  onDelete,
 }: ServiceInspectorProps) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
   return (
     <aside
       aria-label="Service inspector"
@@ -337,6 +341,40 @@ export function ServiceInspector({
               aria-hidden="true"
             />
             <p>Changes apply immediately to this in-memory architecture.</p>
+          </div>
+
+          <div className="border-t border-[#e7e7e2] py-3.5">
+            {confirmingDelete ? (
+              <div>
+                <p className="text-[9px] leading-3.5 text-[#6f3f3d]">
+                  Remove this service and its connected edges?
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDelete(false)}
+                    className="h-7 rounded-[3px] border border-[#d5d5cf] bg-white px-2.5 text-[9px] text-[#575751] hover:bg-[#f7f7f4]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(service.id)}
+                    className="h-7 rounded-[3px] border border-[#e5c9c8] bg-[#fdf3f3] px-2.5 text-[9px] font-medium text-[#8f3432] hover:bg-[#f9e8e8]"
+                  >
+                    Confirm delete
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(true)}
+                className="text-[9px] font-medium text-[#91403d] hover:text-[#6f2e2c]"
+              >
+                Delete service
+              </button>
+            )}
           </div>
         </form>
       ) : (

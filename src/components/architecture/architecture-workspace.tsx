@@ -1,8 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNodesState } from "@xyflow/react";
 import { Graph } from "@phosphor-icons/react";
+import {
+  createService,
+  type CreatableServiceType,
+} from "@/lib/architecture/service-factory";
 import type { ServiceNode } from "@/types/architecture";
 import { ArchitectureCanvas } from "./architecture-canvas";
 import { ComponentPalette } from "./component-palette";
@@ -17,12 +21,26 @@ import {
 } from "./service-inspector";
 import type { ArchitectureNode } from "./service-node";
 
+function getNewNodePosition(index: number) {
+  const column = index % 4;
+  const row = Math.floor(index / 4);
+
+  return {
+    x: column * 290,
+    y: 330 + row * 150,
+  };
+}
+
 export function ArchitectureWorkspace() {
   const [services, setServices] = useState<ServiceNode[]>(initialServices);
-  const [nodes, , onNodesChange] = useNodesState<ArchitectureNode>(initialNodes);
+  const [nodes, setNodes, onNodesChange] =
+    useNodesState<ArchitectureNode>(initialNodes);
+  const [edges, setEdges] = useState(initialEdges);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
     "api-gateway",
   );
+  const nextServiceSequence = useRef(initialServices.length + 1);
+  const nextPlacementIndex = useRef(0);
 
   const servicesById = useMemo(
     () => new Map(services.map((service) => [service.id, service])),
@@ -45,6 +63,54 @@ export function ArchitectureWorkspace() {
       ),
     );
   };
+
+  function addService(type: CreatableServiceType) {
+    let sequence = nextServiceSequence.current;
+    let service = createService(type, sequence);
+
+    while (servicesById.has(service.id)) {
+      sequence += 1;
+      service = createService(type, sequence);
+    }
+
+    const node: ArchitectureNode = {
+      id: service.id,
+      type: "service",
+      position: getNewNodePosition(nextPlacementIndex.current),
+      selected: true,
+      data: { serviceId: service.id },
+    };
+
+    nextServiceSequence.current = sequence + 1;
+    nextPlacementIndex.current += 1;
+
+    setServices((currentServices) => [...currentServices, service]);
+    setNodes((currentNodes) => [
+      ...currentNodes.map((currentNode) => ({
+        ...currentNode,
+        selected: false,
+      })),
+      node,
+    ]);
+    setSelectedServiceId(service.id);
+  }
+
+  function deleteService(serviceId: string) {
+    setServices((currentServices) =>
+      currentServices.filter((service) => service.id !== serviceId),
+    );
+    setNodes((currentNodes) =>
+      currentNodes.filter((node) => node.id !== serviceId),
+    );
+    setEdges((currentEdges) =>
+      currentEdges.filter(
+        (edge) => edge.source !== serviceId && edge.target !== serviceId,
+      ),
+    );
+    setSelectedServiceId((currentSelection) =>
+      currentSelection === serviceId ? null : currentSelection,
+    );
+  }
 
   return (
     <main className="flex h-dvh min-w-[1100px] flex-col overflow-hidden bg-[#f5f5f2] text-[#242421]">
@@ -79,18 +145,20 @@ export function ArchitectureWorkspace() {
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-[190px_minmax(0,1fr)_278px]">
-        <ComponentPalette />
+        <ComponentPalette onCreateService={addService} />
         <ArchitectureCanvas
           servicesById={servicesById}
           nodes={nodes}
-          edges={initialEdges}
+          edges={edges}
           onNodesChange={onNodesChange}
           onSelectService={setSelectedServiceId}
           onClearSelection={() => setSelectedServiceId(null)}
         />
         <ServiceInspector
+          key={selectedService?.id ?? "no-selection"}
           service={selectedService}
           onChange={updateSelectedService}
+          onDelete={deleteService}
         />
       </div>
     </main>

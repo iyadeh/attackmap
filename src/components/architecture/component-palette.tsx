@@ -1,37 +1,39 @@
-import {
-  ServiceIcon,
-  type ServiceIconType,
-} from "./service-node";
+import type { CreatableServiceType } from "@/lib/architecture/service-factory";
+import { ServiceIcon } from "./service-node";
 
 const paletteSections: {
   label: string;
-  services: { name: string; icon: ServiceIconType }[];
+  services: { name: string; type: CreatableServiceType }[];
 }[] = [
   {
     label: "Entry points",
     services: [
-      { name: "Internet", icon: "internet" },
-      { name: "Web application", icon: "web" },
+      { name: "Internet", type: "internet" },
+      { name: "Web application", type: "web" },
     ],
   },
   {
     label: "Services",
     services: [
-      { name: "API gateway", icon: "gateway" },
-      { name: "REST API", icon: "api" },
-      { name: "Auth service", icon: "auth" },
+      { name: "API gateway", type: "gateway" },
+      { name: "REST API", type: "api" },
+      { name: "Auth service", type: "auth" },
     ],
   },
   {
     label: "Data",
     services: [
-      { name: "Database", icon: "database" },
-      { name: "Object storage", icon: "storage" },
+      { name: "Database", type: "database" },
+      { name: "Object storage", type: "storage" },
     ],
   },
 ];
 
-export function ComponentPalette() {
+export function ComponentPalette({
+  onCreateService,
+}: {
+  onCreateService: (type: CreatableServiceType) => void;
+}) {
   return (
     <aside
       aria-label="Component palette"
@@ -40,7 +42,7 @@ export function ComponentPalette() {
       <div className="border-b border-[#e7e7e2] px-3.5 py-3">
         <h2 className="text-[11px] font-semibold">Components</h2>
         <p className="mt-1 text-[9px] leading-3.5 text-[#85857e]">
-          Service types for this architecture
+          Select a service type to add it
         </p>
       </div>
 
@@ -52,15 +54,18 @@ export function ComponentPalette() {
             </h3>
             <div className="space-y-0.5">
               {section.services.map((service) => (
-                <div
+                <button
                   key={service.name}
-                  className="flex items-center gap-2.5 border border-transparent px-2 py-1.5 text-[10px] text-[#4f4f4a]"
+                  type="button"
+                  onClick={() => onCreateService(service.type)}
+                  aria-label={`Add ${service.name}`}
+                  className="flex w-full cursor-pointer items-center gap-2.5 border border-transparent px-2 py-1.5 text-left text-[10px] text-[#4f4f4a] transition-colors hover:border-[#e2e2dd] hover:bg-white"
                 >
                   <span className="text-[#666660]">
-                    <ServiceIcon type={service.icon} size={15} />
+                    <ServiceIcon type={service.type} size={15} />
                   </span>
                   <span>{service.name}</span>
-                </div>
+                </button>
               ))}
             </div>
           </section>

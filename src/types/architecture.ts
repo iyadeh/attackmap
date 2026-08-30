@@ -1,4 +1,5 @@
 export type ServiceType =
+  | "internet"
   | "web"
   | "mobile"
   | "api"
