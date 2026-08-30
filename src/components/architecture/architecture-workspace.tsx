@@ -12,10 +12,12 @@ import {
   createService,
   type CreatableServiceType,
 } from "@/lib/architecture/service-factory";
+import { analyzeArchitecture } from "@/lib/risk-engine/engine";
 import type {
   ConnectionProtocol,
   ServiceNode,
 } from "@/types/architecture";
+import { FindingsView } from "../findings/findings-view";
 import { ArchitectureCanvas } from "./architecture-canvas";
 import { ComponentPalette } from "./component-palette";
 import { ConnectionInspector } from "./connection-inspector";
@@ -41,6 +43,9 @@ function getNewNodePosition(index: number) {
 }
 
 export function ArchitectureWorkspace() {
+  const [activeView, setActiveView] = useState<"architecture" | "findings">(
+    "architecture",
+  );
   const [services, setServices] = useState<ServiceNode[]>(initialServices);
   const [nodes, setNodes, onNodesChange] =
     useNodesState<ArchitectureNode>(initialNodes);
@@ -70,6 +75,10 @@ export function ArchitectureWorkspace() {
   const serviceIds = useMemo(
     () => new Set(servicesById.keys()),
     [servicesById],
+  );
+  const findings = useMemo(
+    () => analyzeArchitecture(services, connections),
+    [connections, services],
   );
 
   const updateSelectedService: ServiceChangeHandler = (field, value) => {
@@ -260,15 +269,39 @@ export function ArchitectureWorkspace() {
           aria-label="Project sections"
           className="flex h-full items-center gap-5 px-3"
         >
-          <span className="flex h-full items-center border-b-2 border-[#292927] text-[11px] font-medium">
+          <button
+            type="button"
+            onClick={() => setActiveView("architecture")}
+            aria-current={activeView === "architecture" ? "page" : undefined}
+            className={`flex h-full items-center border-b-2 text-[11px] ${
+              activeView === "architecture"
+                ? "border-[#292927] font-medium text-[#292927]"
+                : "border-transparent text-[#8a8a84] hover:text-[#555550]"
+            }`}
+          >
             Architecture
-          </span>
+          </button>
           <span className="text-[11px] text-[#8a8a84]">Overview</span>
-          <span className="text-[11px] text-[#8a8a84]">Findings</span>
+          <button
+            type="button"
+            onClick={() => setActiveView("findings")}
+            aria-current={activeView === "findings" ? "page" : undefined}
+            className={`flex h-full items-center border-b-2 text-[11px] ${
+              activeView === "findings"
+                ? "border-[#292927] font-medium text-[#292927]"
+                : "border-transparent text-[#8a8a84] hover:text-[#555550]"
+            }`}
+          >
+            Findings
+          </button>
         </nav>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[190px_minmax(0,1fr)_278px]">
+      <div
+        className={`min-h-0 flex-1 grid-cols-[190px_minmax(0,1fr)_278px] ${
+          activeView === "architecture" ? "grid" : "hidden"
+        }`}
+      >
         <ComponentPalette onCreateService={addService} />
         <ArchitectureCanvas
           servicesById={servicesById}
@@ -306,6 +339,14 @@ export function ArchitectureWorkspace() {
           />
         )}
       </div>
+
+      {activeView === "findings" ? (
+        <FindingsView
+          findings={findings}
+          services={services}
+          connections={connections}
+        />
+      ) : null}
     </main>
   );
 }
