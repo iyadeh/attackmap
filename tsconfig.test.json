@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "incremental": false,
+    "isolatedModules": false,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": ".next/risk-tests",
+    "plugins": [],
+    "rootDir": "src",
+    "target": "ES2022",
+    "types": ["node"]
+  },
+  "include": [
+    "src/types/architecture.ts",
+    "src/types/security.ts",
+    "src/lib/risk-engine/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

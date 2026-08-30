@@ -50,6 +50,7 @@ export type ServiceNode = {
   authentication: AuthenticationMethod;
   authorization: AuthorizationModel;
   encryptionInTransit: boolean;
+  encryptionAtRest?: boolean;
   rateLimiting: boolean;
   sensitiveData: boolean;
   dataClassification: DataClassification;

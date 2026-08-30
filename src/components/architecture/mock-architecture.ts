@@ -54,6 +54,7 @@ export const initialServices: ServiceNode[] = [
     authentication: "mtls",
     authorization: "acl",
     encryptionInTransit: true,
+    encryptionAtRest: false,
     rateLimiting: false,
     sensitiveData: true,
     dataClassification: "restricted",
