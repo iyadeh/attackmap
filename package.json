@@ -10,9 +10,10 @@
     "db:migrate": "drizzle-kit migrate",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsc --project tsconfig.test.json && node --test .next/risk-tests/lib/architecture/autosave-coordinator.test.js .next/risk-tests/lib/db/architecture-mapper.test.js .next/risk-tests/lib/db/schema.test.js .next/risk-tests/lib/findings/finding-dispositions.test.js .next/risk-tests/lib/risk-engine/engine.test.js .next/risk-tests/lib/risk-engine/scoring.test.js",
+    "test": "tsc --project tsconfig.test.json && node --test .next/risk-tests/lib/architecture/autosave-coordinator.test.js .next/risk-tests/lib/db/architecture-mapper.test.js .next/risk-tests/lib/db/schema.test.js .next/risk-tests/lib/findings/finding-dispositions.test.js .next/risk-tests/lib/overview/project-security-overview.test.js .next/risk-tests/lib/risk-engine/engine.test.js .next/risk-tests/lib/risk-engine/scoring.test.js",
     "test:autosave": "tsc --project tsconfig.test.json && node --test .next/risk-tests/lib/architecture/autosave-coordinator.test.js",
     "test:findings": "tsc --project tsconfig.test.json && node --test .next/risk-tests/lib/findings/finding-dispositions.test.js",
+    "test:overview": "tsc --project tsconfig.test.json && node --test .next/risk-tests/lib/overview/project-security-overview.test.js",
     "test:persistence": "tsc --project tsconfig.test.json && node --test .next/risk-tests/lib/db/architecture-mapper.test.js .next/risk-tests/lib/db/schema.test.js",
     "test:persistence:integration": "tsc --project tsconfig.test.json && node --test .next/risk-tests/lib/db/architecture-persistence.integration.test.js .next/risk-tests/lib/db/autosave-persistence.integration.test.js .next/risk-tests/lib/db/finding-disposition-persistence.integration.test.js .next/risk-tests/lib/db/project-persistence.integration.test.js"
   },

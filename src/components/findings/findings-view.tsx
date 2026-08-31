@@ -1,20 +1,22 @@
 import { useMemo, useState, type FormEvent } from "react";
 import {
+  getFindingDispositionCounts,
   MAX_ACCEPTED_RISK_RATIONALE_LENGTH,
-  triageActiveFindings,
   type FindingTriage,
 } from "@/lib/findings/finding-dispositions";
 import type { ServiceConnection, ServiceNode } from "@/types/architecture";
-import type {
-  Finding,
-  FindingDisposition,
-  FindingSeverity,
-  SecurityScoreResult,
-} from "@/types/security";
+import type { SecurityScoreResult } from "@/types/security";
+import {
+  findingSeverityOrder,
+  findingSeverityPresentation,
+  getConnectionName,
+  getFindingTargetLabel,
+  getServiceName,
+  type FindingContext,
+} from "./finding-presentation";
 
 type FindingsViewProps = {
-  findings: readonly Finding[];
-  dispositions: readonly FindingDisposition[];
+  triagedFindings: readonly FindingTriage[];
   services: readonly ServiceNode[];
   connections: readonly ServiceConnection[];
   securityScore: SecurityScoreResult;
@@ -28,83 +30,6 @@ type FindingsViewProps = {
 type FindingDispositionMutationResult =
   | { ok: true }
   | { ok: false; error: string };
-
-type FindingContext = {
-  servicesById: ReadonlyMap<string, ServiceNode>;
-  connectionsById: ReadonlyMap<string, ServiceConnection>;
-};
-
-const severityOrder: FindingSeverity[] = [
-  "critical",
-  "high",
-  "medium",
-  "low",
-];
-
-const severityPresentation: Record<
-  FindingSeverity,
-  { label: string; textClassName: string; lineClassName: string }
-> = {
-  critical: {
-    label: "Critical",
-    textClassName: "text-[#913c39]",
-    lineClassName: "bg-[#b0524e]",
-  },
-  high: {
-    label: "High",
-    textClassName: "text-[#955027]",
-    lineClassName: "bg-[#b66a3b]",
-  },
-  medium: {
-    label: "Medium",
-    textClassName: "text-[#80651f]",
-    lineClassName: "bg-[#a88a39]",
-  },
-  low: {
-    label: "Low",
-    textClassName: "text-[#4c665a]",
-    lineClassName: "bg-[#668075]",
-  },
-};
-
-function getServiceName(service: ServiceNode | undefined) {
-  if (!service) {
-    return "Missing service";
-  }
-
-  return service.name.trim() || "Unnamed service";
-}
-
-function getConnectionName(
-  connection: ServiceConnection | undefined,
-  servicesById: ReadonlyMap<string, ServiceNode>,
-) {
-  if (!connection) {
-    return "Connection unavailable";
-  }
-
-  return `${getServiceName(servicesById.get(connection.source))} to ${getServiceName(
-    servicesById.get(connection.target),
-  )}`;
-}
-
-function getFindingTargetLabel(
-  finding: Finding,
-  context: FindingContext,
-) {
-  if (finding.connectionId) {
-    return getConnectionName(
-      context.connectionsById.get(finding.connectionId),
-      context.servicesById,
-    );
-  }
-
-  if (finding.serviceId) {
-    return getServiceName(context.servicesById.get(finding.serviceId));
-  }
-
-  return "Architecture";
-}
 
 function SeveritySummary({
   result,
@@ -123,8 +48,8 @@ function SeveritySummary({
     >
       <span className="text-[#5f5f59]">{result.totalFindings} total</span>
       <span className="h-3 w-px bg-[#deded8]" />
-      {severityOrder.map((severity) => {
-        const presentation = severityPresentation[severity];
+      {findingSeverityOrder.map((severity) => {
+        const presentation = findingSeverityPresentation[severity];
 
         return (
           <span key={severity} className="flex items-center gap-1">
@@ -160,7 +85,7 @@ function FindingList({
   return (
     <div className="min-h-0 overflow-y-auto border-r border-[#dfdfda] bg-[#fbfbf9]">
       {triagedFindings.map(({ finding, status }) => {
-        const presentation = severityPresentation[finding.severity];
+        const presentation = findingSeverityPresentation[finding.severity];
         const selected = finding.id === selectedFindingId;
 
         return (
@@ -233,7 +158,7 @@ function FindingDetail({
     "accept" | "reopen" | null
   >(null);
   const [error, setError] = useState<string | null>(null);
-  const presentation = severityPresentation[finding.severity];
+  const presentation = findingSeverityPresentation[finding.severity];
   const service = finding.serviceId
     ? context.servicesById.get(finding.serviceId)
     : undefined;
@@ -469,8 +394,7 @@ function FindingDetail({
 }
 
 export function FindingsView({
-  findings,
-  dispositions,
+  triagedFindings,
   services,
   connections,
   securityScore,
@@ -491,20 +415,13 @@ export function FindingsView({
     }),
     [connections, services],
   );
-  const triagedFindings = useMemo(
-    () => triageActiveFindings(findings, dispositions),
-    [dispositions, findings],
-  );
   const selectedFinding =
     triagedFindings.find(
       ({ finding }) => finding.id === selectedFindingId,
     ) ??
     triagedFindings[0] ??
     null;
-  const acceptedCount = triagedFindings.filter(
-    ({ status }) => status === "accepted",
-  ).length;
-  const openCount = triagedFindings.length - acceptedCount;
+  const dispositionCounts = getFindingDispositionCounts(triagedFindings);
 
   return (
     <section
@@ -520,8 +437,8 @@ export function FindingsView({
         </div>
         <SeveritySummary
           result={securityScore}
-          openCount={openCount}
-          acceptedCount={acceptedCount}
+          openCount={dispositionCounts.open}
+          acceptedCount={dispositionCounts.accepted}
         />
       </div>
 

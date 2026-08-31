@@ -20,6 +20,7 @@
     "src/lib/architecture/autosave-coordinator.test.ts",
     "src/lib/db/**/*.ts",
     "src/lib/findings/**/*.ts",
+    "src/lib/overview/**/*.ts",
     "src/lib/risk-engine/**/*.ts"
   ],
   "exclude": ["node_modules"]

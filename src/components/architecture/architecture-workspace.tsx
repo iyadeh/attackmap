@@ -18,6 +18,8 @@ import {
   createService,
   type CreatableServiceType,
 } from "@/lib/architecture/service-factory";
+import { triageActiveFindings } from "@/lib/findings/finding-dispositions";
+import { deriveProjectSecurityOverview } from "@/lib/overview/project-security-overview";
 import { analyzeArchitecture } from "@/lib/risk-engine/engine";
 import { calculateSecurityScore } from "@/lib/risk-engine/scoring";
 import type {
@@ -31,6 +33,7 @@ import type {
 import type { FindingDisposition } from "@/types/security";
 import { FindingsView } from "../findings/findings-view";
 import { SecurityScoreStatus } from "../findings/security-score-status";
+import { ProjectSecurityOverview } from "../overview/project-security-overview";
 import { CurrentProjectControls } from "../projects/current-project-controls";
 import { ArchitectureCanvas } from "./architecture-canvas";
 import { ComponentPalette } from "./component-palette";
@@ -91,9 +94,9 @@ export function ArchitectureWorkspace({
     [initialArchitecture],
   );
   const [project, setProject] = useState<Project>(initialArchitecture.project);
-  const [activeView, setActiveView] = useState<"architecture" | "findings">(
-    "architecture",
-  );
+  const [activeView, setActiveView] = useState<
+    "architecture" | "overview" | "findings"
+  >("architecture");
   const [services, setServices] = useState<ServiceNode[]>(
     initialArchitecture.services,
   );
@@ -170,6 +173,20 @@ export function ArchitectureWorkspace({
   const securityScore = useMemo(
     () => calculateSecurityScore(findings),
     [findings],
+  );
+  const triagedFindings = useMemo(
+    () => triageActiveFindings(findings, findingDispositions),
+    [findingDispositions, findings],
+  );
+  const overviewSummary = useMemo(
+    () =>
+      deriveProjectSecurityOverview(
+        services,
+        connections,
+        triagedFindings,
+        securityScore,
+      ),
+    [connections, securityScore, services, triagedFindings],
   );
 
   const updateSelectedService: ServiceChangeHandler = (field, value) => {
@@ -493,7 +510,18 @@ export function ArchitectureWorkspace({
           >
             Architecture
           </button>
-          <span className="text-[11px] text-[#8a8a84]">Overview</span>
+          <button
+            type="button"
+            onClick={() => setActiveView("overview")}
+            aria-current={activeView === "overview" ? "page" : undefined}
+            className={`flex h-full items-center border-b-2 text-[11px] ${
+              activeView === "overview"
+                ? "border-[#292927] font-medium text-[#292927]"
+                : "border-transparent text-[#8a8a84] hover:text-[#555550]"
+            }`}
+          >
+            Overview
+          </button>
           <button
             type="button"
             onClick={() => setActiveView("findings")}
@@ -552,10 +580,17 @@ export function ArchitectureWorkspace({
         )}
       </div>
 
+      {activeView === "overview" ? (
+        <ProjectSecurityOverview
+          summary={overviewSummary}
+          services={services}
+          connections={connections}
+        />
+      ) : null}
+
       {activeView === "findings" ? (
         <FindingsView
-          findings={findings}
-          dispositions={findingDispositions}
+          triagedFindings={triagedFindings}
           services={services}
           connections={connections}
           securityScore={securityScore}

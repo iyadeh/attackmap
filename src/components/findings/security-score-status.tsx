@@ -7,7 +7,7 @@ type SecurityScoreStatusProps = {
   result: SecurityScoreResult;
 };
 
-const categoryPresentation: Record<
+export const securityScoreCategoryPresentation: Record<
   SecurityScoreCategory,
   { label: string; className: string }
 > = {
@@ -22,7 +22,7 @@ const categoryPresentation: Record<
 };
 
 export function SecurityScoreStatus({ result }: SecurityScoreStatusProps) {
-  const presentation = categoryPresentation[result.category];
+  const presentation = securityScoreCategoryPresentation[result.category];
 
   return (
     <div

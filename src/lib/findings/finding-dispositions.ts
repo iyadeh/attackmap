@@ -18,6 +18,11 @@ export type FindingTriage = {
   disposition: FindingDisposition | null;
 };
 
+export type FindingDispositionCounts = Record<
+  FindingDispositionStatus,
+  number
+>;
+
 function parseFindingId(value: unknown): string {
   if (
     typeof value !== "string" ||
@@ -75,4 +80,19 @@ export function triageActiveFindings(
       disposition,
     };
   });
+}
+
+export function getFindingDispositionCounts(
+  triagedFindings: readonly FindingTriage[],
+): FindingDispositionCounts {
+  const counts: FindingDispositionCounts = {
+    open: 0,
+    accepted: 0,
+  };
+
+  for (const { status } of triagedFindings) {
+    counts[status] += 1;
+  }
+
+  return counts;
 }
