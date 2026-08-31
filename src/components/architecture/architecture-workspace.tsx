@@ -4,7 +4,11 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useNodesState } from "@xyflow/react";
 import { Graph } from "@phosphor-icons/react";
-import { loadArchitectureAction } from "@/app/actions";
+import {
+  acceptFindingRiskAction,
+  loadArchitectureAction,
+  reopenFindingAction,
+} from "@/app/actions";
 import {
   canCreateServiceConnection,
   createServiceConnection,
@@ -24,6 +28,7 @@ import type {
   ServiceNode,
   ServicePosition,
 } from "@/types/architecture";
+import type { FindingDisposition } from "@/types/security";
 import { FindingsView } from "../findings/findings-view";
 import { SecurityScoreStatus } from "../findings/security-score-status";
 import { CurrentProjectControls } from "../projects/current-project-controls";
@@ -74,10 +79,12 @@ function getLoadedArchitectureSnapshot(
 
 type ArchitectureWorkspaceProps = {
   initialArchitecture: ProjectArchitecture;
+  initialFindingDispositions: FindingDisposition[];
 };
 
 export function ArchitectureWorkspace({
   initialArchitecture,
+  initialFindingDispositions,
 }: ArchitectureWorkspaceProps) {
   const initialSnapshot = useMemo(
     () => getLoadedArchitectureSnapshot(initialArchitecture),
@@ -94,6 +101,9 @@ export function ArchitectureWorkspace({
     createArchitectureNodes(initialArchitecture.servicePositions),
   );
   const [connections, setConnections] = useState(initialArchitecture.connections);
+  const [findingDispositions, setFindingDispositions] = useState(
+    initialFindingDispositions,
+  );
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [selectedConnectionId, setSelectedConnectionId] = useState<
     string | null
@@ -326,6 +336,39 @@ export function ArchitectureWorkspace({
     setSelectedConnectionId(null);
   }
 
+  async function acceptFindingRisk(findingId: string, rationale: string) {
+    const result = await acceptFindingRiskAction(
+      project.id,
+      findingId,
+      rationale,
+    );
+
+    if (result.ok) {
+      setFindingDispositions((currentDispositions) => [
+        ...currentDispositions.filter(
+          (disposition) => disposition.findingId !== findingId,
+        ),
+        result.disposition,
+      ]);
+    }
+
+    return result;
+  }
+
+  async function reopenFindingRisk(findingId: string) {
+    const result = await reopenFindingAction(project.id, findingId);
+
+    if (result.ok) {
+      setFindingDispositions((currentDispositions) =>
+        currentDispositions.filter(
+          (disposition) => disposition.findingId !== findingId,
+        ),
+      );
+    }
+
+    return result;
+  }
+
   function saveArchitecture() {
     setPersistenceStatus(null);
     setPendingPersistenceAction("save");
@@ -512,9 +555,12 @@ export function ArchitectureWorkspace({
       {activeView === "findings" ? (
         <FindingsView
           findings={findings}
+          dispositions={findingDispositions}
           services={services}
           connections={connections}
           securityScore={securityScore}
+          onAcceptRisk={acceptFindingRisk}
+          onReopen={reopenFindingRisk}
         />
       ) : null}
     </main>

@@ -7,6 +7,12 @@ import {
   saveArchitectureProject,
 } from "@/lib/db/architecture-persistence";
 import {
+  acceptFindingRisk,
+  loadFindingDispositions,
+  reopenFinding,
+} from "@/lib/db/finding-disposition-persistence";
+import { parseAcceptedRiskInput } from "@/lib/findings/finding-dispositions";
+import {
   createProject,
   deleteProject,
   isProjectId,
@@ -14,6 +20,7 @@ import {
   renameProject,
 } from "@/lib/db/project-persistence";
 import type { Project, ProjectArchitecture } from "@/types/architecture";
+import type { FindingDisposition } from "@/types/security";
 
 export type SaveArchitectureActionResult =
   | { ok: true }
@@ -32,6 +39,18 @@ export type ProjectActionResult =
   | { ok: false; error: string };
 
 export type DeleteProjectActionResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export type LoadFindingDispositionsActionResult =
+  | { ok: true; dispositions: FindingDisposition[] | null }
+  | { ok: false; error: string };
+
+export type AcceptFindingRiskActionResult =
+  | { ok: true; disposition: FindingDisposition }
+  | { ok: false; error: string };
+
+export type ReopenFindingActionResult =
   | { ok: true }
   | { ok: false; error: string };
 
@@ -69,6 +88,71 @@ export async function loadArchitectureAction(
     console.error("Failed to load project architecture.", error);
 
     return { ok: false, error: "Could not load saved architecture." };
+  }
+}
+
+export async function loadFindingDispositionsAction(
+  projectId: unknown,
+): Promise<LoadFindingDispositionsActionResult> {
+  try {
+    return {
+      ok: true,
+      dispositions: await loadFindingDispositions(projectId),
+    };
+  } catch (error) {
+    console.error("Failed to load finding dispositions.", error);
+
+    return { ok: false, error: "Could not load finding dispositions." };
+  }
+}
+
+export async function acceptFindingRiskAction(
+  projectId: unknown,
+  findingId: unknown,
+  rationale: unknown,
+): Promise<AcceptFindingRiskActionResult> {
+  let input;
+
+  try {
+    input = parseAcceptedRiskInput(findingId, rationale);
+  } catch {
+    return {
+      ok: false,
+      error: "A non-empty rationale of at most 1000 characters is required.",
+    };
+  }
+
+  try {
+    const disposition = await acceptFindingRisk(
+      projectId,
+      input.findingId,
+      input.rationale,
+    );
+
+    return disposition
+      ? { ok: true, disposition }
+      : { ok: false, error: "Project not found." };
+  } catch (error) {
+    console.error("Failed to accept finding risk.", error);
+
+    return { ok: false, error: "Could not accept risk." };
+  }
+}
+
+export async function reopenFindingAction(
+  projectId: unknown,
+  findingId: unknown,
+): Promise<ReopenFindingActionResult> {
+  try {
+    const reopened = await reopenFinding(projectId, findingId);
+
+    return reopened
+      ? { ok: true }
+      : { ok: false, error: "Project not found." };
+  } catch (error) {
+    console.error("Failed to reopen finding.", error);
+
+    return { ok: false, error: "Could not reopen finding." };
   }
 }
 

@@ -2,7 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
-import { loadArchitectureAction } from "@/app/actions";
+import {
+  loadArchitectureAction,
+  loadFindingDispositionsAction,
+} from "@/app/actions";
 import { ArchitectureWorkspace } from "@/components/architecture/architecture-workspace";
 
 type ProjectPageProps = {
@@ -13,9 +16,12 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   await connection();
 
   const { projectId } = await params;
-  const result = await loadArchitectureAction(projectId);
+  const [architectureResult, dispositionResult] = await Promise.all([
+    loadArchitectureAction(projectId),
+    loadFindingDispositionsAction(projectId),
+  ]);
 
-  if (!result.ok) {
+  if (!architectureResult.ok || !dispositionResult.ok) {
     return (
       <main className="grid h-dvh place-items-center bg-[#f5f5f2] px-6 text-[#242421]">
         <section className="w-full max-w-md border border-[#dfdfda] bg-white p-6">
@@ -44,14 +50,15 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     );
   }
 
-  if (!result.architecture) {
+  if (!architectureResult.architecture) {
     notFound();
   }
 
   return (
     <ArchitectureWorkspace
-      key={result.architecture.project.id}
-      initialArchitecture={result.architecture}
+      key={architectureResult.architecture.project.id}
+      initialArchitecture={architectureResult.architecture}
+      initialFindingDispositions={dispositionResult.dispositions ?? []}
     />
   );
 }

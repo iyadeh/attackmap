@@ -26,3 +26,14 @@ export type Finding = {
   serviceId?: string;
   connectionId?: string;
 };
+
+export type FindingDispositionStatus = "open" | "accepted";
+
+export type FindingDisposition = {
+  projectId: string;
+  findingId: string;
+  status: "accepted";
+  rationale: string;
+  createdAt: Date;
+  updatedAt: Date;
+};

@@ -1,17 +1,33 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
+import {
+  MAX_ACCEPTED_RISK_RATIONALE_LENGTH,
+  triageActiveFindings,
+  type FindingTriage,
+} from "@/lib/findings/finding-dispositions";
 import type { ServiceConnection, ServiceNode } from "@/types/architecture";
 import type {
   Finding,
+  FindingDisposition,
   FindingSeverity,
   SecurityScoreResult,
 } from "@/types/security";
 
 type FindingsViewProps = {
   findings: readonly Finding[];
+  dispositions: readonly FindingDisposition[];
   services: readonly ServiceNode[];
   connections: readonly ServiceConnection[];
   securityScore: SecurityScoreResult;
+  onAcceptRisk: (
+    findingId: string,
+    rationale: string,
+  ) => Promise<FindingDispositionMutationResult>;
+  onReopen: (findingId: string) => Promise<FindingDispositionMutationResult>;
 };
+
+type FindingDispositionMutationResult =
+  | { ok: true }
+  | { ok: false; error: string };
 
 type FindingContext = {
   servicesById: ReadonlyMap<string, ServiceNode>;
@@ -90,7 +106,15 @@ function getFindingTargetLabel(
   return "Architecture";
 }
 
-function SeveritySummary({ result }: { result: SecurityScoreResult }) {
+function SeveritySummary({
+  result,
+  openCount,
+  acceptedCount,
+}: {
+  result: SecurityScoreResult;
+  openCount: number;
+  acceptedCount: number;
+}) {
   return (
     <div
       aria-label="Finding severity breakdown"
@@ -115,24 +139,27 @@ function SeveritySummary({ result }: { result: SecurityScoreResult }) {
           </span>
         );
       })}
+      <span className="h-3 w-px bg-[#deded8]" />
+      <span className="text-[#5f5f59]">Open {openCount}</span>
+      <span className="text-[#667267]">Accepted {acceptedCount}</span>
     </div>
   );
 }
 
 function FindingList({
-  findings,
+  triagedFindings,
   selectedFindingId,
   context,
   onSelect,
 }: {
-  findings: readonly Finding[];
+  triagedFindings: readonly FindingTriage[];
   selectedFindingId: string;
   context: FindingContext;
   onSelect: (findingId: string) => void;
 }) {
   return (
     <div className="min-h-0 overflow-y-auto border-r border-[#dfdfda] bg-[#fbfbf9]">
-      {findings.map((finding) => {
+      {triagedFindings.map(({ finding, status }) => {
         const presentation = severityPresentation[finding.severity];
         const selected = finding.id === selectedFindingId;
 
@@ -159,8 +186,17 @@ function FindingList({
               >
                 {presentation.label}
               </span>
-              <span className="font-mono text-[8px] text-[#96968f]">
-                {finding.ruleId}
+              <span className="flex items-center gap-2 font-mono text-[8px]">
+                <span
+                  className={
+                    status === "accepted"
+                      ? "text-[#667267]"
+                      : "text-[#7f7f78]"
+                  }
+                >
+                  {status === "accepted" ? "Accepted risk" : "Open"}
+                </span>
+                <span className="text-[#96968f]">{finding.ruleId}</span>
               </span>
             </span>
             <span className="mt-1.5 block text-[11px] font-semibold text-[#30302d]">
@@ -180,12 +216,23 @@ function FindingList({
 }
 
 function FindingDetail({
-  finding,
+  triage,
   context,
+  onAcceptRisk,
+  onReopen,
 }: {
-  finding: Finding;
+  triage: FindingTriage;
   context: FindingContext;
+  onAcceptRisk: FindingsViewProps["onAcceptRisk"];
+  onReopen: FindingsViewProps["onReopen"];
 }) {
+  const { finding, disposition, status } = triage;
+  const [accepting, setAccepting] = useState(false);
+  const [rationale, setRationale] = useState("");
+  const [pendingAction, setPendingAction] = useState<
+    "accept" | "reopen" | null
+  >(null);
+  const [error, setError] = useState<string | null>(null);
   const presentation = severityPresentation[finding.severity];
   const service = finding.serviceId
     ? context.servicesById.get(finding.serviceId)
@@ -193,6 +240,51 @@ function FindingDetail({
   const connection = finding.connectionId
     ? context.connectionsById.get(finding.connectionId)
     : undefined;
+
+  async function submitAcceptance(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const normalizedRationale = rationale.trim();
+
+    if (!normalizedRationale) {
+      setError("Rationale is required.");
+      return;
+    }
+
+    setError(null);
+    setPendingAction("accept");
+    try {
+      const result = await onAcceptRisk(finding.id, normalizedRationale);
+
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
+      setAccepting(false);
+      setRationale("");
+    } catch {
+      setError("Could not accept risk.");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function reopen() {
+    setError(null);
+    setPendingAction("reopen");
+    try {
+      const result = await onReopen(finding.id);
+
+      if (!result.ok) {
+        setError(result.error);
+      }
+    } catch {
+      setError("Could not reopen finding.");
+    } finally {
+      setPendingAction(null);
+    }
+  }
 
   return (
     <aside
@@ -264,13 +356,112 @@ function FindingDetail({
           </p>
         </section>
 
-        <section className="py-4">
+        <section className="border-b border-[#e7e7e2] py-4">
           <h4 className="mb-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#777770]">
             Recommendation
           </h4>
           <p className="text-[11px] leading-5 text-[#484843]">
             {finding.recommendation}
           </p>
+        </section>
+
+        <section className="py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h4 className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[#777770]">
+                Disposition
+              </h4>
+              <p
+                className={`mt-1.5 font-mono text-[9px] font-medium ${
+                  status === "accepted"
+                    ? "text-[#667267]"
+                    : "text-[#666660]"
+                }`}
+              >
+                {status === "accepted" ? "Accepted risk" : "Open"}
+              </p>
+            </div>
+
+            {status === "accepted" ? (
+              <button
+                type="button"
+                onClick={reopen}
+                disabled={pendingAction !== null}
+                className="text-[9px] font-medium text-[#555550] hover:text-[#292927] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {pendingAction === "reopen" ? "Reopening…" : "Reopen"}
+              </button>
+            ) : !accepting ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setAccepting(true);
+                  setError(null);
+                }}
+                className="h-7 rounded-[3px] border border-[#292927] bg-[#292927] px-2.5 text-[9px] font-medium text-white hover:bg-[#3b3b38]"
+              >
+                Accept risk
+              </button>
+            ) : null}
+          </div>
+
+          {status === "accepted" && disposition ? (
+            <div className="mt-3 border-l border-[#cfcfc9] pl-3">
+              <p className="text-[9px] font-medium text-[#74746d]">
+                Rationale
+              </p>
+              <p className="mt-1 text-[11px] leading-5 text-[#484843]">
+                {disposition.rationale}
+              </p>
+            </div>
+          ) : null}
+
+          {status === "open" && accepting ? (
+            <form onSubmit={submitAcceptance} className="mt-3">
+              <label
+                htmlFor={`accepted-risk-rationale-${finding.id}`}
+                className="text-[9px] font-medium text-[#666660]"
+              >
+                Acceptance rationale
+              </label>
+              <textarea
+                id={`accepted-risk-rationale-${finding.id}`}
+                value={rationale}
+                onChange={(event) => setRationale(event.target.value)}
+                maxLength={MAX_ACCEPTED_RISK_RATIONALE_LENGTH}
+                rows={3}
+                disabled={pendingAction !== null}
+                placeholder="Document why this risk is acceptable."
+                className="mt-1.5 block w-full resize-none rounded-[3px] border border-[#d8d8d2] bg-white px-2.5 py-2 text-[10px] leading-4 text-[#343431] outline-none placeholder:text-[#a0a099] focus:border-[#777770] disabled:bg-[#f5f5f1]"
+              />
+              <div className="mt-2 flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={pendingAction !== null}
+                  className="h-7 rounded-[3px] border border-[#292927] bg-[#292927] px-2.5 text-[9px] font-medium text-white hover:bg-[#3b3b38] disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  {pendingAction === "accept" ? "Accepting…" : "Accept risk"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAccepting(false);
+                    setError(null);
+                  }}
+                  disabled={pendingAction !== null}
+                  className="text-[9px] font-medium text-[#666660] hover:text-[#343431] disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : null}
+
+          {error ? (
+            <p role="alert" className="mt-2 text-[9px] text-[#913c39]">
+              {error}
+            </p>
+          ) : null}
         </section>
       </div>
     </aside>
@@ -279,9 +470,12 @@ function FindingDetail({
 
 export function FindingsView({
   findings,
+  dispositions,
   services,
   connections,
   securityScore,
+  onAcceptRisk,
+  onReopen,
 }: FindingsViewProps) {
   const [selectedFindingId, setSelectedFindingId] = useState<string | null>(
     null,
@@ -297,10 +491,20 @@ export function FindingsView({
     }),
     [connections, services],
   );
+  const triagedFindings = useMemo(
+    () => triageActiveFindings(findings, dispositions),
+    [dispositions, findings],
+  );
   const selectedFinding =
-    findings.find((finding) => finding.id === selectedFindingId) ??
-    findings[0] ??
+    triagedFindings.find(
+      ({ finding }) => finding.id === selectedFindingId,
+    ) ??
+    triagedFindings[0] ??
     null;
+  const acceptedCount = triagedFindings.filter(
+    ({ status }) => status === "accepted",
+  ).length;
+  const openCount = triagedFindings.length - acceptedCount;
 
   return (
     <section
@@ -314,18 +518,28 @@ export function FindingsView({
             Live model analysis
           </p>
         </div>
-        <SeveritySummary result={securityScore} />
+        <SeveritySummary
+          result={securityScore}
+          openCount={openCount}
+          acceptedCount={acceptedCount}
+        />
       </div>
 
       {selectedFinding ? (
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(360px,0.82fr)_minmax(0,1.18fr)]">
           <FindingList
-            findings={findings}
-            selectedFindingId={selectedFinding.id}
+            triagedFindings={triagedFindings}
+            selectedFindingId={selectedFinding.finding.id}
             context={context}
             onSelect={setSelectedFindingId}
           />
-          <FindingDetail finding={selectedFinding} context={context} />
+          <FindingDetail
+            key={selectedFinding.finding.id}
+            triage={selectedFinding}
+            context={context}
+            onAcceptRisk={onAcceptRisk}
+            onReopen={onReopen}
+          />
         </div>
       ) : (
         <div className="min-h-0 flex-1 bg-white px-6 py-8">

@@ -8,6 +8,13 @@
       "when": 1788110572420,
       "tag": "0000_initial_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788160115041,
+      "tag": "0001_melodic_forge",
+      "breakpoints": true
     }
   ]
 }

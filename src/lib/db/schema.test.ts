@@ -20,6 +20,7 @@ import {
   authorizationModelEnum,
   connectionProtocolEnum,
   dataClassificationEnum,
+  findingDispositions,
   serviceConnections,
   serviceExposureEnum,
   serviceProtocolEnum,
@@ -84,10 +85,24 @@ test("current service and connection domain values fit insert rows", () => {
   assert.equal(connectionRow.targetServiceId, connection.target);
 });
 
-test("architecture records are project-scoped and cascade cleanup", () => {
+test("persisted project records are scoped and cascade cleanup", () => {
+  const dispositionConfig = getTableConfig(findingDispositions);
   const serviceConfig = getTableConfig(services);
   const connectionConfig = getTableConfig(serviceConnections);
 
+  assert.deepEqual(
+    dispositionConfig.primaryKeys[0]?.columns.map((column) => column.name),
+    ["project_id", "finding_id"],
+  );
+  assert.equal(dispositionConfig.foreignKeys.length, 1);
+  assert.equal(dispositionConfig.foreignKeys[0]?.onDelete, "cascade");
+  assert.deepEqual(
+    dispositionConfig.checks.map((constraint) => constraint.name).sort(),
+    [
+      "finding_dispositions_finding_id_length",
+      "finding_dispositions_rationale_length",
+    ],
+  );
   assert.deepEqual(
     serviceConfig.primaryKeys[0]?.columns.map((column) => column.name),
     ["project_id", "id"],

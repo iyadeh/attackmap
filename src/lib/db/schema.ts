@@ -62,6 +62,37 @@ export const projects = pgTable("projects", {
     .notNull(),
 });
 
+export const findingDispositions = pgTable(
+  "finding_dispositions",
+  {
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    findingId: text("finding_id").notNull(),
+    rationale: text("rationale").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "finding_dispositions_project_id_finding_id_pk",
+      columns: [table.projectId, table.findingId],
+    }),
+    check(
+      "finding_dispositions_finding_id_length",
+      sql`char_length(${table.findingId}) between 1 and 256`,
+    ),
+    check(
+      "finding_dispositions_rationale_length",
+      sql`char_length(btrim(${table.rationale})) between 1 and 1000`,
+    ),
+  ],
+);
+
 export const services = pgTable(
   "services",
   {
@@ -137,6 +168,8 @@ export const serviceConnections = pgTable(
 
 export type ProjectRow = typeof projects.$inferSelect;
 export type NewProjectRow = typeof projects.$inferInsert;
+export type FindingDispositionRow = typeof findingDispositions.$inferSelect;
+export type NewFindingDispositionRow = typeof findingDispositions.$inferInsert;
 export type ServiceRow = typeof services.$inferSelect;
 export type NewServiceRow = typeof services.$inferInsert;
 export type ServiceConnectionRow = typeof serviceConnections.$inferSelect;
