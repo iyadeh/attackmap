@@ -147,6 +147,12 @@ test("architecture mapping returns source data only", () => {
   ]);
   assert.equal("findings" in architecture, false);
   assert.equal("securityScore" in architecture, false);
+  assert.deepEqual(architecture.project, {
+    id: projectId,
+    name: "Persistence test",
+    createdAt: projectRow.createdAt,
+    updatedAt: projectRow.updatedAt,
+  });
 });
 
 test("snapshot validation preserves valid domain values", () => {

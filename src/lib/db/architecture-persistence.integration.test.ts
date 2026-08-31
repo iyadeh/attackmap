@@ -6,7 +6,6 @@ import { eq } from "drizzle-orm";
 
 import type {
   ArchitectureSnapshot,
-  Project,
   ServiceNode,
 } from "../../types/architecture";
 
@@ -14,7 +13,7 @@ import { projects } from "./schema";
 
 loadEnvConfig(process.cwd());
 
-const integrationProject: Project = {
+const integrationProject = {
   id: "00000000-0000-4000-8000-000000000099",
   name: "Architecture persistence integration test",
   description: "Isolated project removed after the test.",
@@ -88,18 +87,27 @@ test("save and load replace one isolated architecture snapshot", async () => {
       null,
     );
 
-    await saveArchitectureProject(integrationProject, initialSnapshot);
+    await database.insert(projects).values(integrationProject);
+    await saveArchitectureProject(integrationProject.id, initialSnapshot);
     await closeDatabase();
 
     const loadedInitial = await loadArchitectureProject(integrationProject.id);
 
-    assert.deepEqual(loadedInitial, {
-      project: integrationProject,
-      ...initialSnapshot,
-    });
+    assert.equal(loadedInitial?.project.id, integrationProject.id);
+    assert.equal(loadedInitial?.project.name, integrationProject.name);
+    assert.equal(
+      loadedInitial?.project.description,
+      integrationProject.description,
+    );
+    assert.deepEqual(loadedInitial?.services, initialSnapshot.services);
+    assert.deepEqual(
+      loadedInitial?.servicePositions,
+      initialSnapshot.servicePositions,
+    );
+    assert.deepEqual(loadedInitial?.connections, initialSnapshot.connections);
 
     await assert.rejects(
-      saveArchitectureProject(integrationProject, {
+      saveArchitectureProject(integrationProject.id, {
         ...initialSnapshot,
         servicePositions: [],
       }),
@@ -118,16 +126,21 @@ test("save and load replace one isolated architecture snapshot", async () => {
       connections: [],
     };
 
-    await saveArchitectureProject(integrationProject, replacementSnapshot);
+    await saveArchitectureProject(integrationProject.id, replacementSnapshot);
 
     const loadedReplacement = await loadArchitectureProject(
       integrationProject.id,
     );
 
-    assert.deepEqual(loadedReplacement, {
-      project: integrationProject,
-      ...replacementSnapshot,
-    });
+    assert.deepEqual(loadedReplacement?.services, replacementSnapshot.services);
+    assert.deepEqual(
+      loadedReplacement?.servicePositions,
+      replacementSnapshot.servicePositions,
+    );
+    assert.deepEqual(
+      loadedReplacement?.connections,
+      replacementSnapshot.connections,
+    );
   } finally {
     await getDatabase()
       .delete(projects)

@@ -8,6 +8,7 @@ import {
   serviceTypes,
   type ArchitectureSnapshot,
   type ConnectionProtocol,
+  type Project,
   type ProjectArchitecture,
   type ServiceConnection,
   type ServiceNode,
@@ -324,15 +325,21 @@ export function mapArchitectureFromRows(
   const mappedServices = serviceRows.map(mapServiceFromRow);
 
   return {
-    project: {
-      id: projectRow.id,
-      name: projectRow.name,
-      ...(projectRow.description === null
-        ? {}
-        : { description: projectRow.description }),
-    },
+    project: mapProjectFromRow(projectRow),
     services: mappedServices.map(({ service }) => service),
     servicePositions: mappedServices.map(({ position }) => position),
     connections: connectionRows.map(mapConnectionFromRow),
+  };
+}
+
+export function mapProjectFromRow(projectRow: ProjectRow): Project {
+  return {
+    id: projectRow.id,
+    name: projectRow.name,
+    ...(projectRow.description === null
+      ? {}
+      : { description: projectRow.description }),
+    createdAt: projectRow.createdAt,
+    updatedAt: projectRow.updatedAt,
   };
 }

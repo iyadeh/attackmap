@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 
-import type { Project, ProjectArchitecture } from "@/types/architecture";
+import type { ProjectArchitecture } from "@/types/architecture";
 
 import {
   mapArchitectureFromRows,
@@ -8,11 +8,16 @@ import {
   parseArchitectureSnapshot,
 } from "./architecture-mapper";
 import { getDatabase } from "./client";
+import { isProjectId } from "./project-persistence";
 import { projects, serviceConnections, services } from "./schema";
 
 export async function loadArchitectureProject(
   projectId: string,
 ): Promise<ProjectArchitecture | null> {
+  if (!isProjectId(projectId)) {
+    return null;
+  }
+
   const database = getDatabase();
 
   return database.transaction(
@@ -49,39 +54,37 @@ export async function loadArchitectureProject(
 }
 
 export async function saveArchitectureProject(
-  project: Project,
+  projectId: string,
   input: unknown,
 ): Promise<void> {
+  if (!isProjectId(projectId)) {
+    throw new Error("Architecture project not found.");
+  }
+
   const snapshot = parseArchitectureSnapshot(input);
   const { serviceRows, connectionRows } = mapArchitectureToRows(
-    project.id,
+    projectId,
     snapshot,
   );
   const database = getDatabase();
 
   await database.transaction(async (transaction) => {
-    await transaction
-      .insert(projects)
-      .values({
-        id: project.id,
-        name: project.name,
-        description: project.description ?? null,
-      })
-      .onConflictDoUpdate({
-        target: projects.id,
-        set: {
-          name: project.name,
-          description: project.description ?? null,
-          updatedAt: new Date(),
-        },
-      });
+    const updatedProjects = await transaction
+      .update(projects)
+      .set({ updatedAt: new Date() })
+      .where(eq(projects.id, projectId))
+      .returning({ id: projects.id });
+
+    if (updatedProjects.length === 0) {
+      throw new Error("Architecture project not found.");
+    }
 
     await transaction
       .delete(serviceConnections)
-      .where(eq(serviceConnections.projectId, project.id));
+      .where(eq(serviceConnections.projectId, projectId));
     await transaction
       .delete(services)
-      .where(eq(services.projectId, project.id));
+      .where(eq(services.projectId, projectId));
 
     if (serviceRows.length > 0) {
       await transaction.insert(services).values(serviceRows);

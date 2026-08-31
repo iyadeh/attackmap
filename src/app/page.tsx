@@ -1,12 +1,5 @@
-import { connection } from "next/server";
+import { redirect } from "next/navigation";
 
-import { loadArchitectureAction } from "@/app/actions";
-import { ArchitectureWorkspace } from "@/components/architecture/architecture-workspace";
-
-export default async function Home() {
-  await connection();
-
-  const initialLoadResult = await loadArchitectureAction();
-
-  return <ArchitectureWorkspace initialLoadResult={initialLoadResult} />;
+export default function Home() {
+  redirect("/projects");
 }
