@@ -16,6 +16,8 @@
   "include": [
     "src/types/architecture.ts",
     "src/types/security.ts",
+    "src/lib/architecture/autosave-coordinator.ts",
+    "src/lib/architecture/autosave-coordinator.test.ts",
     "src/lib/db/**/*.ts",
     "src/lib/risk-engine/**/*.ts"
   ],

@@ -45,7 +45,6 @@ export async function saveArchitectureAction(
 
   try {
     await saveArchitectureProject(projectId, input);
-    revalidatePath(`/projects/${projectId}`);
 
     return { ok: true };
   } catch (error) {

@@ -1,3 +1,5 @@
+import type { ArchitectureSaveStatus } from "@/lib/architecture/autosave-coordinator";
+
 export type PersistenceStatus = {
   kind: "success" | "neutral" | "error";
   message: string;
@@ -6,6 +8,7 @@ export type PersistenceStatus = {
 type PersistenceControlsProps = {
   pendingAction: "save" | "load" | null;
   status: PersistenceStatus | null;
+  saveStatus: ArchitectureSaveStatus;
   onSave: () => void;
   onLoad: () => void;
 };
@@ -13,10 +16,21 @@ type PersistenceControlsProps = {
 export function PersistenceControls({
   pendingAction,
   status,
+  saveStatus,
   onSave,
   onLoad,
 }: PersistenceControlsProps) {
   const pending = pendingAction !== null;
+  const saveStatusPresentation = {
+    saved: { kind: "success", message: "Saved" },
+    unsaved: { kind: "neutral", message: "Unsaved" },
+    saving: { kind: "neutral", message: "Saving…" },
+    error: { kind: "error", message: "Save failed" },
+  } as const satisfies Record<ArchitectureSaveStatus, PersistenceStatus>;
+  const displayedStatus =
+    saveStatus === "saved"
+      ? (status ?? saveStatusPresentation.saved)
+      : saveStatusPresentation[saveStatus];
 
   return (
     <div className="flex items-center gap-2 border-l border-[#e7e7e2] px-3">
@@ -36,19 +50,19 @@ export function PersistenceControls({
       >
         {pendingAction === "save" ? "Saving…" : "Save"}
       </button>
-      {status ? (
+      {displayedStatus ? (
         <span
-          role={status.kind === "error" ? "alert" : "status"}
-          title={status.message}
+          role={displayedStatus.kind === "error" ? "alert" : "status"}
+          title={displayedStatus.message}
           className={`max-w-[150px] truncate text-[9px] ${
-            status.kind === "error"
+            displayedStatus.kind === "error"
               ? "text-[#913c39]"
-              : status.kind === "success"
+              : displayedStatus.kind === "success"
                 ? "text-[#667267]"
                 : "text-[#777770]"
           }`}
         >
-          {status.message}
+          {displayedStatus.message}
         </span>
       ) : null}
     </div>

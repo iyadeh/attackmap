@@ -4,10 +4,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useNodesState } from "@xyflow/react";
 import { Graph } from "@phosphor-icons/react";
-import {
-  loadArchitectureAction,
-  saveArchitectureAction,
-} from "@/app/actions";
+import { loadArchitectureAction } from "@/app/actions";
 import {
   canCreateServiceConnection,
   createServiceConnection,
@@ -42,6 +39,7 @@ import {
   type ServiceChangeHandler,
 } from "./service-inspector";
 import type { ArchitectureNode } from "./service-node";
+import { useArchitectureAutosave } from "./use-architecture-autosave";
 
 function getNewNodePosition(index: number) {
   const column = index % 4;
@@ -64,6 +62,16 @@ function createArchitectureNodes(
   }));
 }
 
+function getLoadedArchitectureSnapshot(
+  architecture: ProjectArchitecture,
+): ArchitectureSnapshot {
+  return {
+    services: architecture.services,
+    servicePositions: architecture.servicePositions,
+    connections: architecture.connections,
+  };
+}
+
 type ArchitectureWorkspaceProps = {
   initialArchitecture: ProjectArchitecture;
 };
@@ -71,6 +79,10 @@ type ArchitectureWorkspaceProps = {
 export function ArchitectureWorkspace({
   initialArchitecture,
 }: ArchitectureWorkspaceProps) {
+  const initialSnapshot = useMemo(
+    () => getLoadedArchitectureSnapshot(initialArchitecture),
+    [initialArchitecture],
+  );
   const [project, setProject] = useState<Project>(initialArchitecture.project);
   const [activeView, setActiveView] = useState<"architecture" | "findings">(
     "architecture",
@@ -99,6 +111,35 @@ export function ArchitectureWorkspace({
   const servicesById = useMemo(
     () => new Map(services.map((service) => [service.id, service])),
     [services],
+  );
+  const architectureSnapshot = useMemo<ArchitectureSnapshot>(
+    () => ({
+      services,
+      servicePositions: nodes.flatMap((node) =>
+        servicesById.has(node.id)
+          ? [
+              {
+                serviceId: node.id,
+                x: node.position.x,
+                y: node.position.y,
+              },
+            ]
+          : [],
+      ),
+      connections,
+    }),
+    [connections, nodes, services, servicesById],
+  );
+  const {
+    status: autosaveStatus,
+    saveNow: saveArchitectureNow,
+    pause: pauseAutosave,
+    reset: resetAutosave,
+    resume: resumeAutosave,
+  } = useArchitectureAutosave(
+    project.id,
+    initialSnapshot,
+    architectureSnapshot,
   );
   const selectedService = selectedServiceId
     ? (servicesById.get(selectedServiceId) ?? null)
@@ -286,30 +327,14 @@ export function ArchitectureWorkspace({
   }
 
   function saveArchitecture() {
-    const snapshot: ArchitectureSnapshot = {
-      services,
-      servicePositions: nodes.flatMap((node) =>
-        servicesById.has(node.id)
-          ? [
-              {
-                serviceId: node.id,
-                x: node.position.x,
-                y: node.position.y,
-              },
-            ]
-          : [],
-      ),
-      connections,
-    };
-
     setPersistenceStatus(null);
     setPendingPersistenceAction("save");
     startPersistenceTransition(async () => {
       try {
-        const result = await saveArchitectureAction(project.id, snapshot);
+        const saved = await saveArchitectureNow(architectureSnapshot);
 
         setPersistenceStatus(
-          result.ok
+          saved
             ? { kind: "success", message: "Saved." }
             : {
                 kind: "error",
@@ -332,9 +357,11 @@ export function ArchitectureWorkspace({
     setPendingPersistenceAction("load");
     startPersistenceTransition(async () => {
       try {
+        await pauseAutosave();
         const result = await loadArchitectureAction(project.id);
 
         if (!result.ok) {
+          resumeAutosave();
           setPersistenceStatus({
             kind: "error",
             message: "Load failed. Current work kept.",
@@ -343,6 +370,7 @@ export function ArchitectureWorkspace({
         }
 
         if (!result.architecture) {
+          resumeAutosave();
           setPersistenceStatus({
             kind: "neutral",
             message: "Project no longer exists. Current work kept.",
@@ -350,6 +378,7 @@ export function ArchitectureWorkspace({
           return;
         }
 
+        resetAutosave(getLoadedArchitectureSnapshot(result.architecture));
         setProject(result.architecture.project);
         setServices(result.architecture.services);
         setNodes(
@@ -361,6 +390,7 @@ export function ArchitectureWorkspace({
         nextPlacementIndex.current = result.architecture.services.length;
         setPersistenceStatus({ kind: "success", message: "Loaded." });
       } catch {
+        resumeAutosave();
         setPersistenceStatus({
           kind: "error",
           message: "Load failed. Current work kept.",
@@ -397,6 +427,7 @@ export function ArchitectureWorkspace({
         <PersistenceControls
           pendingAction={pendingPersistenceAction}
           status={persistenceStatus}
+          saveStatus={autosaveStatus}
           onSave={saveArchitecture}
           onLoad={loadArchitecture}
         />
