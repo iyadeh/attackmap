@@ -14,99 +14,40 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import type {
-  AuthenticationMethod,
-  AuthorizationModel,
-  ConnectionProtocol,
-  DataClassification,
-  ServiceExposure,
-  ServiceProtocol,
-  ServiceType,
-} from "@/types/architecture";
+import {
+  authenticationMethods,
+  authorizationModels,
+  connectionProtocols,
+  dataClassifications,
+  serviceExposures,
+  serviceProtocols,
+  serviceTypes,
+} from "../../types/architecture";
 
-const serviceTypeValues = [
-  "internet",
-  "web",
-  "mobile",
-  "api",
-  "gateway",
-  "backend",
-  "auth",
-  "database",
-  "cache",
-  "storage",
-  "queue",
-  "third_party",
-] as const satisfies readonly [ServiceType, ...ServiceType[]];
-
-const serviceExposureValues = [
-  "public",
-  "private",
-  "internal",
-] as const satisfies readonly [ServiceExposure, ...ServiceExposure[]];
-
-const authenticationMethodValues = [
-  "none",
-  "session",
-  "jwt",
-  "oauth2",
-  "oidc",
-  "api_key",
-  "mtls",
-] as const satisfies readonly [AuthenticationMethod, ...AuthenticationMethod[]];
-
-const authorizationModelValues = [
-  "none",
-  "rbac",
-  "abac",
-  "acl",
-  "policy",
-] as const satisfies readonly [AuthorizationModel, ...AuthorizationModel[]];
-
-const dataClassificationValues = [
-  "public",
-  "internal",
-  "confidential",
-  "restricted",
-] as const satisfies readonly [DataClassification, ...DataClassification[]];
-
-const serviceProtocolValues = ["https", "tcp_tls"] as const satisfies readonly [
-  ServiceProtocol,
-  ...ServiceProtocol[],
-];
-
-const connectionProtocolValues = [
-  "https",
-  "http",
-  "grpc",
-  "tcp",
-  "websocket",
-] as const satisfies readonly [ConnectionProtocol, ...ConnectionProtocol[]];
-
-export const serviceTypeEnum = pgEnum("service_type", serviceTypeValues);
+export const serviceTypeEnum = pgEnum("service_type", serviceTypes);
 export const serviceExposureEnum = pgEnum(
   "service_exposure",
-  serviceExposureValues,
+  serviceExposures,
 );
 export const authenticationMethodEnum = pgEnum(
   "authentication_method",
-  authenticationMethodValues,
+  authenticationMethods,
 );
 export const authorizationModelEnum = pgEnum(
   "authorization_model",
-  authorizationModelValues,
+  authorizationModels,
 );
 export const dataClassificationEnum = pgEnum(
   "data_classification",
-  dataClassificationValues,
+  dataClassifications,
 );
 export const serviceProtocolEnum = pgEnum(
   "service_protocol",
-  serviceProtocolValues,
+  serviceProtocols,
 );
 export const connectionProtocolEnum = pgEnum(
   "connection_protocol",
-  connectionProtocolValues,
+  connectionProtocols,
 );
 
 export const projects = pgTable("projects", {

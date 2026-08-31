@@ -3,12 +3,35 @@ import postgres from "postgres";
 
 import * as schema from "./schema";
 
-const databaseUrl = process.env.DATABASE_URL;
+type DatabaseClient = ReturnType<typeof postgres>;
 
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is required to connect to PostgreSQL.");
+let databaseClient: DatabaseClient | null = null;
+let database: ReturnType<typeof createDatabase> | null = null;
+
+function createDatabase() {
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL is required to connect to PostgreSQL.");
+  }
+
+  databaseClient = postgres(databaseUrl);
+
+  return drizzle(databaseClient, { schema });
 }
 
-export const databaseClient = postgres(databaseUrl);
+export function getDatabase() {
+  database ??= createDatabase();
 
-export const database = drizzle(databaseClient, { schema });
+  return database;
+}
+
+export async function closeDatabase() {
+  if (!databaseClient) {
+    return;
+  }
+
+  await databaseClient.end();
+  databaseClient = null;
+  database = null;
+}

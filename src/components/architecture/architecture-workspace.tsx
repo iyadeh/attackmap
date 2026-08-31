@@ -1,13 +1,19 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useNodesState } from "@xyflow/react";
 import { Graph } from "@phosphor-icons/react";
+import {
+  loadArchitectureAction,
+  saveArchitectureAction,
+  type LoadArchitectureActionResult,
+} from "@/app/actions";
 import {
   canCreateServiceConnection,
   createServiceConnection,
   getEncryptionAfterProtocolChange,
 } from "@/lib/architecture/connection-factory";
+import { DEVELOPMENT_PROJECT } from "@/lib/architecture/development-project";
 import {
   createService,
   type CreatableServiceType,
@@ -15,8 +21,11 @@ import {
 import { analyzeArchitecture } from "@/lib/risk-engine/engine";
 import { calculateSecurityScore } from "@/lib/risk-engine/scoring";
 import type {
+  ArchitectureSnapshot,
   ConnectionProtocol,
+  Project,
   ServiceNode,
+  ServicePosition,
 } from "@/types/architecture";
 import { FindingsView } from "../findings/findings-view";
 import { SecurityScoreStatus } from "../findings/security-score-status";
@@ -28,6 +37,10 @@ import {
   initialNodes,
   initialServices,
 } from "./mock-architecture";
+import {
+  PersistenceControls,
+  type PersistenceStatus,
+} from "./persistence-controls";
 import {
   ServiceInspector,
   type ServiceChangeHandler,
@@ -44,23 +57,68 @@ function getNewNodePosition(index: number) {
   };
 }
 
-export function ArchitectureWorkspace() {
+function createArchitectureNodes(
+  servicePositions: ServicePosition[],
+): ArchitectureNode[] {
+  return servicePositions.map((position) => ({
+    id: position.serviceId,
+    type: "service",
+    position: { x: position.x, y: position.y },
+    data: { serviceId: position.serviceId },
+  }));
+}
+
+type ArchitectureWorkspaceProps = {
+  initialLoadResult: LoadArchitectureActionResult;
+};
+
+export function ArchitectureWorkspace({
+  initialLoadResult,
+}: ArchitectureWorkspaceProps) {
+  const initialArchitecture = initialLoadResult.ok
+    ? initialLoadResult.architecture
+    : null;
+  const [project, setProject] = useState<Project>(
+    initialArchitecture?.project ?? DEVELOPMENT_PROJECT,
+  );
   const [activeView, setActiveView] = useState<"architecture" | "findings">(
     "architecture",
   );
-  const [services, setServices] = useState<ServiceNode[]>(initialServices);
-  const [nodes, setNodes, onNodesChange] =
-    useNodesState<ArchitectureNode>(initialNodes);
-  const [connections, setConnections] = useState(initialConnections);
+  const [services, setServices] = useState<ServiceNode[]>(
+    initialArchitecture?.services ?? initialServices,
+  );
+  const [nodes, setNodes, onNodesChange] = useNodesState<ArchitectureNode>(
+    initialArchitecture
+      ? createArchitectureNodes(initialArchitecture.servicePositions)
+      : initialNodes,
+  );
+  const [connections, setConnections] = useState(
+    initialArchitecture?.connections ?? initialConnections,
+  );
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
-    "api-gateway",
+    initialArchitecture ? null : "api-gateway",
   );
   const [selectedConnectionId, setSelectedConnectionId] = useState<
     string | null
   >(null);
-  const nextServiceSequence = useRef(initialServices.length + 1);
-  const nextConnectionSequence = useRef(initialConnections.length + 1);
-  const nextPlacementIndex = useRef(0);
+  const [pendingPersistenceAction, setPendingPersistenceAction] = useState<
+    "save" | "load" | null
+  >(null);
+  const [persistenceStatus, setPersistenceStatus] =
+    useState<PersistenceStatus | null>(
+      initialLoadResult.ok
+        ? null
+        : {
+            kind: "error",
+            message: "Initial load failed. Demo kept.",
+          },
+    );
+  const [, startPersistenceTransition] = useTransition();
+  const nextServiceSequence = useRef(services.length + 1);
+  const nextConnectionSequence = useRef(connections.length + 1);
+  const nextPlacementIndex = useRef(
+    initialArchitecture ? initialArchitecture.services.length : 0,
+  );
 
   const servicesById = useMemo(
     () => new Map(services.map((service) => [service.id, service])),
@@ -251,6 +309,92 @@ export function ArchitectureWorkspace() {
     setSelectedConnectionId(null);
   }
 
+  function saveArchitecture() {
+    const snapshot: ArchitectureSnapshot = {
+      services,
+      servicePositions: nodes.flatMap((node) =>
+        servicesById.has(node.id)
+          ? [
+              {
+                serviceId: node.id,
+                x: node.position.x,
+                y: node.position.y,
+              },
+            ]
+          : [],
+      ),
+      connections,
+    };
+
+    setPersistenceStatus(null);
+    setPendingPersistenceAction("save");
+    startPersistenceTransition(async () => {
+      try {
+        const result = await saveArchitectureAction(snapshot);
+
+        setPersistenceStatus(
+          result.ok
+            ? { kind: "success", message: "Saved." }
+            : {
+                kind: "error",
+                message: "Save failed. Current work kept.",
+              },
+        );
+      } catch {
+        setPersistenceStatus({
+          kind: "error",
+          message: "Save failed. Current work kept.",
+        });
+      } finally {
+        setPendingPersistenceAction(null);
+      }
+    });
+  }
+
+  function loadArchitecture() {
+    setPersistenceStatus(null);
+    setPendingPersistenceAction("load");
+    startPersistenceTransition(async () => {
+      try {
+        const result = await loadArchitectureAction();
+
+        if (!result.ok) {
+          setPersistenceStatus({
+            kind: "error",
+            message: "Load failed. Current work kept.",
+          });
+          return;
+        }
+
+        if (!result.architecture) {
+          setPersistenceStatus({
+            kind: "neutral",
+            message: "No saved architecture yet.",
+          });
+          return;
+        }
+
+        setProject(result.architecture.project);
+        setServices(result.architecture.services);
+        setNodes(
+          createArchitectureNodes(result.architecture.servicePositions),
+        );
+        setConnections(result.architecture.connections);
+        setSelectedServiceId(null);
+        setSelectedConnectionId(null);
+        nextPlacementIndex.current = result.architecture.services.length;
+        setPersistenceStatus({ kind: "success", message: "Loaded." });
+      } catch {
+        setPersistenceStatus({
+          kind: "error",
+          message: "Load failed. Current work kept.",
+        });
+      } finally {
+        setPendingPersistenceAction(null);
+      }
+    });
+  }
+
   return (
     <main className="flex h-dvh min-w-[1100px] flex-col overflow-hidden bg-[#f5f5f2] text-[#242421]">
       <header className="flex h-12 shrink-0 items-center border-b border-[#dfdfda] bg-white px-3">
@@ -267,9 +411,16 @@ export function ArchitectureWorkspace() {
           <span className="truncate text-[#73736d]">Projects</span>
           <span className="text-[#b5b5af]">/</span>
           <span className="truncate font-medium text-[#343431]">
-            VaultShare Production
+            {project.name}
           </span>
         </div>
+
+        <PersistenceControls
+          pendingAction={pendingPersistenceAction}
+          status={persistenceStatus}
+          onSave={saveArchitecture}
+          onLoad={loadArchitecture}
+        />
 
         <SecurityScoreStatus result={securityScore} />
 

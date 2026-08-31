@@ -3,7 +3,17 @@ import test from "node:test";
 
 import { getTableConfig } from "drizzle-orm/pg-core";
 
-import type { ServiceConnection, ServiceNode } from "@/types/architecture";
+import {
+  authenticationMethods,
+  authorizationModels,
+  connectionProtocols,
+  dataClassifications,
+  serviceExposures,
+  serviceProtocols,
+  serviceTypes,
+  type ServiceConnection,
+  type ServiceNode,
+} from "../../types/architecture";
 
 import {
   authenticationMethodEnum,
@@ -20,55 +30,13 @@ import {
 } from "./schema";
 
 test("database enums represent the architecture domain vocabulary", () => {
-  assert.deepEqual(serviceTypeEnum.enumValues, [
-    "internet",
-    "web",
-    "mobile",
-    "api",
-    "gateway",
-    "backend",
-    "auth",
-    "database",
-    "cache",
-    "storage",
-    "queue",
-    "third_party",
-  ]);
-  assert.deepEqual(serviceExposureEnum.enumValues, [
-    "public",
-    "private",
-    "internal",
-  ]);
-  assert.deepEqual(authenticationMethodEnum.enumValues, [
-    "none",
-    "session",
-    "jwt",
-    "oauth2",
-    "oidc",
-    "api_key",
-    "mtls",
-  ]);
-  assert.deepEqual(authorizationModelEnum.enumValues, [
-    "none",
-    "rbac",
-    "abac",
-    "acl",
-    "policy",
-  ]);
-  assert.deepEqual(dataClassificationEnum.enumValues, [
-    "public",
-    "internal",
-    "confidential",
-    "restricted",
-  ]);
-  assert.deepEqual(serviceProtocolEnum.enumValues, ["https", "tcp_tls"]);
-  assert.deepEqual(connectionProtocolEnum.enumValues, [
-    "https",
-    "http",
-    "grpc",
-    "tcp",
-    "websocket",
-  ]);
+  assert.deepEqual(serviceTypeEnum.enumValues, serviceTypes);
+  assert.deepEqual(serviceExposureEnum.enumValues, serviceExposures);
+  assert.deepEqual(authenticationMethodEnum.enumValues, authenticationMethods);
+  assert.deepEqual(authorizationModelEnum.enumValues, authorizationModels);
+  assert.deepEqual(dataClassificationEnum.enumValues, dataClassifications);
+  assert.deepEqual(serviceProtocolEnum.enumValues, serviceProtocols);
+  assert.deepEqual(connectionProtocolEnum.enumValues, connectionProtocols);
 });
 
 test("current service and connection domain values fit insert rows", () => {

@@ -1,44 +1,68 @@
-export type ServiceType =
-  | "internet"
-  | "web"
-  | "mobile"
-  | "api"
-  | "gateway"
-  | "backend"
-  | "auth"
-  | "database"
-  | "cache"
-  | "storage"
-  | "queue"
-  | "third_party";
+export const serviceTypes = [
+  "internet",
+  "web",
+  "mobile",
+  "api",
+  "gateway",
+  "backend",
+  "auth",
+  "database",
+  "cache",
+  "storage",
+  "queue",
+  "third_party",
+] as const;
 
-export type ServiceExposure = "public" | "private" | "internal";
+export type ServiceType = (typeof serviceTypes)[number];
 
-export type AuthenticationMethod =
-  | "none"
-  | "session"
-  | "jwt"
-  | "oauth2"
-  | "oidc"
-  | "api_key"
-  | "mtls";
+export const serviceExposures = ["public", "private", "internal"] as const;
 
-export type AuthorizationModel = "none" | "rbac" | "abac" | "acl" | "policy";
+export type ServiceExposure = (typeof serviceExposures)[number];
 
-export type DataClassification =
-  | "public"
-  | "internal"
-  | "confidential"
-  | "restricted";
+export const authenticationMethods = [
+  "none",
+  "session",
+  "jwt",
+  "oauth2",
+  "oidc",
+  "api_key",
+  "mtls",
+] as const;
 
-export type ServiceProtocol = "https" | "tcp_tls";
+export type AuthenticationMethod = (typeof authenticationMethods)[number];
 
-export type ConnectionProtocol =
-  | "https"
-  | "http"
-  | "grpc"
-  | "tcp"
-  | "websocket";
+export const authorizationModels = [
+  "none",
+  "rbac",
+  "abac",
+  "acl",
+  "policy",
+] as const;
+
+export type AuthorizationModel = (typeof authorizationModels)[number];
+
+export const dataClassifications = [
+  "public",
+  "internal",
+  "confidential",
+  "restricted",
+] as const;
+
+export type DataClassification = (typeof dataClassifications)[number];
+
+export const serviceProtocols = ["https", "tcp_tls"] as const;
+
+export type ServiceProtocol = (typeof serviceProtocols)[number];
+
+export const connectionProtocols = [
+  "https",
+  "http",
+  "grpc",
+  "tcp",
+  "websocket",
+] as const;
+
+export type ConnectionProtocol = (typeof connectionProtocols)[number];
 
 export type ServiceNode = {
   id: string;
@@ -62,4 +86,26 @@ export type ServiceConnection = {
   target: string;
   protocol: ConnectionProtocol;
   encrypted: boolean;
+};
+
+export type Project = {
+  id: string;
+  name: string;
+  description?: string;
+};
+
+export type ServicePosition = {
+  serviceId: string;
+  x: number;
+  y: number;
+};
+
+export type ArchitectureSnapshot = {
+  services: ServiceNode[];
+  servicePositions: ServicePosition[];
+  connections: ServiceConnection[];
+};
+
+export type ProjectArchitecture = ArchitectureSnapshot & {
+  project: Project;
 };

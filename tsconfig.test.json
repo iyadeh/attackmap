@@ -16,8 +16,7 @@
   "include": [
     "src/types/architecture.ts",
     "src/types/security.ts",
-    "src/lib/db/schema.ts",
-    "src/lib/db/schema.test.ts",
+    "src/lib/db/**/*.ts",
     "src/lib/risk-engine/**/*.ts"
   ],
   "exclude": ["node_modules"]
