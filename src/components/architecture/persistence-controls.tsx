@@ -28,7 +28,7 @@ export function PersistenceControls({
     error: { kind: "error", message: "Save failed" },
   } as const satisfies Record<ArchitectureSaveStatus, PersistenceStatus>;
   const displayedStatus =
-    saveStatus === "saved"
+    status?.kind === "error" || saveStatus === "saved"
       ? (status ?? saveStatusPresentation.saved)
       : saveStatusPresentation[saveStatus];
 
@@ -38,6 +38,8 @@ export function PersistenceControls({
         type="button"
         onClick={onLoad}
         disabled={pending}
+        aria-label="Load saved architecture"
+        title="Load saved architecture"
         className="h-7 rounded-[3px] border border-[#d8d8d2] bg-white px-2.5 text-[10px] font-medium text-[#4f4f4a] hover:bg-[#f5f5f1] disabled:cursor-not-allowed disabled:opacity-45"
       >
         {pendingAction === "load" ? "Loading…" : "Load"}
@@ -46,6 +48,8 @@ export function PersistenceControls({
         type="button"
         onClick={onSave}
         disabled={pending}
+        aria-label="Save architecture now"
+        title="Save architecture now"
         className="h-7 rounded-[3px] border border-[#292927] bg-[#292927] px-2.5 text-[10px] font-medium text-white hover:bg-[#3b3b38] disabled:cursor-not-allowed disabled:opacity-45"
       >
         {pendingAction === "save" ? "Saving…" : "Save"}

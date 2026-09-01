@@ -38,7 +38,7 @@ export function ProjectsView({ initialResult }: ProjectsViewProps) {
       const result = await createProjectAction(trimmedName);
 
       if (!result.ok) {
-        setError("Could not create project.");
+        setError(result.error);
         return;
       }
 
@@ -128,14 +128,20 @@ export function ProjectsView({ initialResult }: ProjectsViewProps) {
                   className="flex items-center gap-5 border-b border-[#dfdfda] py-3"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[12px] font-medium text-[#343431]">
+                    <p
+                      title={project.name}
+                      className="truncate text-[12px] font-medium text-[#343431]"
+                    >
                       {project.name}
                     </p>
                     <p className="mt-0.5 truncate font-mono text-[9px] text-[#92928c]">
                       {project.id}
                     </p>
                     {project.description ? (
-                      <p className="mt-1 truncate text-[10px] text-[#777770]">
+                      <p
+                        title={project.description}
+                        className="mt-1 truncate text-[10px] text-[#777770]"
+                      >
                         {project.description}
                       </p>
                     ) : null}

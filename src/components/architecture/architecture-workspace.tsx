@@ -478,7 +478,10 @@ export function ArchitectureWorkspace({
             Projects
           </Link>
           <span className="text-[#b5b5af]">/</span>
-          <span className="truncate font-medium text-[#343431]">
+          <span
+            title={project.name}
+            className="truncate font-medium text-[#343431]"
+          >
             {project.name}
           </span>
           <CurrentProjectControls project={project} onRenamed={setProject} />

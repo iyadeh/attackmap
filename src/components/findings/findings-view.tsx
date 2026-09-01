@@ -66,7 +66,7 @@ function SeveritySummary({
       })}
       <span className="h-3 w-px bg-[#deded8]" />
       <span className="text-[#5f5f59]">Open {openCount}</span>
-      <span className="text-[#667267]">Accepted {acceptedCount}</span>
+      <span className="text-[#667267]">Accepted risk {acceptedCount}</span>
     </div>
   );
 }
@@ -87,6 +87,7 @@ function FindingList({
       {triagedFindings.map(({ finding, status }) => {
         const presentation = findingSeverityPresentation[finding.severity];
         const selected = finding.id === selectedFindingId;
+        const targetLabel = getFindingTargetLabel(finding, context);
 
         return (
           <button
@@ -124,13 +125,19 @@ function FindingList({
                 <span className="text-[#96968f]">{finding.ruleId}</span>
               </span>
             </span>
-            <span className="mt-1.5 block text-[11px] font-semibold text-[#30302d]">
+            <span
+              title={finding.title}
+              className="mt-1.5 line-clamp-2 block text-[11px] font-semibold text-[#30302d]"
+            >
               {finding.title}
             </span>
-            <span className="mt-1 block truncate text-[9px] text-[#686862]">
-              {getFindingTargetLabel(finding, context)}
+            <span
+              title={targetLabel}
+              className="mt-1 block truncate text-[9px] text-[#686862]"
+            >
+              {targetLabel}
             </span>
-            <span className="mt-1.5 block text-[9px] leading-4 text-[#85857e]">
+            <span className="mt-1.5 line-clamp-2 block text-[9px] leading-4 text-[#85857e]">
               {finding.description}
             </span>
           </button>
@@ -165,6 +172,7 @@ function FindingDetail({
   const connection = finding.connectionId
     ? context.connectionsById.get(finding.connectionId)
     : undefined;
+  const rationaleErrorId = `accepted-risk-error-${finding.id}`;
 
   async function submitAcceptance(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -230,7 +238,7 @@ function FindingDetail({
           >
             {presentation.label}
           </p>
-          <h3 className="mt-2 text-[16px] font-semibold tracking-[-0.02em] text-[#292926]">
+          <h3 className="mt-2 break-words text-[16px] font-semibold tracking-[-0.02em] text-[#292926]">
             {finding.title}
           </h3>
         </div>
@@ -248,7 +256,7 @@ function FindingDetail({
                 <p className="mt-1 text-[11px] font-medium text-[#343431]">
                   {getConnectionName(connection, context.servicesById)}
                 </p>
-                <p className="mt-1 font-mono text-[8px] text-[#92928b]">
+                <p className="mt-1 break-all font-mono text-[8px] text-[#92928b]">
                   {connection.id}
                 </p>
               </div>
@@ -261,7 +269,7 @@ function FindingDetail({
                 <p className="mt-1 text-[11px] font-medium text-[#343431]">
                   {getServiceName(service)}
                 </p>
-                <p className="mt-1 font-mono text-[8px] text-[#92928b]">
+                <p className="mt-1 break-all font-mono text-[8px] text-[#92928b]">
                   {finding.serviceId}
                 </p>
               </div>
@@ -276,7 +284,7 @@ function FindingDetail({
           <h4 className="mb-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#777770]">
             Description
           </h4>
-          <p className="text-[11px] leading-5 text-[#484843]">
+          <p className="break-words text-[11px] leading-5 text-[#484843]">
             {finding.description}
           </p>
         </section>
@@ -285,7 +293,7 @@ function FindingDetail({
           <h4 className="mb-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#777770]">
             Recommendation
           </h4>
-          <p className="text-[11px] leading-5 text-[#484843]">
+          <p className="break-words text-[11px] leading-5 text-[#484843]">
             {finding.recommendation}
           </p>
         </section>
@@ -335,7 +343,7 @@ function FindingDetail({
               <p className="text-[9px] font-medium text-[#74746d]">
                 Rationale
               </p>
-              <p className="mt-1 text-[11px] leading-5 text-[#484843]">
+              <p className="mt-1 whitespace-pre-wrap break-words text-[11px] leading-5 text-[#484843]">
                 {disposition.rationale}
               </p>
             </div>
@@ -343,12 +351,17 @@ function FindingDetail({
 
           {status === "open" && accepting ? (
             <form onSubmit={submitAcceptance} className="mt-3">
-              <label
-                htmlFor={`accepted-risk-rationale-${finding.id}`}
-                className="text-[9px] font-medium text-[#666660]"
-              >
-                Acceptance rationale
-              </label>
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor={`accepted-risk-rationale-${finding.id}`}
+                  className="text-[9px] font-medium text-[#666660]"
+                >
+                  Acceptance rationale
+                </label>
+                <span className="font-mono text-[8px] text-[#92928b]">
+                  {rationale.length}/{MAX_ACCEPTED_RISK_RATIONALE_LENGTH}
+                </span>
+              </div>
               <textarea
                 id={`accepted-risk-rationale-${finding.id}`}
                 value={rationale}
@@ -356,6 +369,9 @@ function FindingDetail({
                 maxLength={MAX_ACCEPTED_RISK_RATIONALE_LENGTH}
                 rows={3}
                 disabled={pendingAction !== null}
+                autoFocus
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? rationaleErrorId : undefined}
                 placeholder="Document why this risk is acceptable."
                 className="mt-1.5 block w-full resize-none rounded-[3px] border border-[#d8d8d2] bg-white px-2.5 py-2 text-[10px] leading-4 text-[#343431] outline-none placeholder:text-[#a0a099] focus:border-[#777770] disabled:bg-[#f5f5f1]"
               />
@@ -383,7 +399,11 @@ function FindingDetail({
           ) : null}
 
           {error ? (
-            <p role="alert" className="mt-2 text-[9px] text-[#913c39]">
+            <p
+              id={rationaleErrorId}
+              role="alert"
+              className="mt-2 text-[9px] text-[#913c39]"
+            >
               {error}
             </p>
           ) : null}

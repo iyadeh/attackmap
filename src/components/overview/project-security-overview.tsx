@@ -67,7 +67,10 @@ export function ProjectSecurityOverview({
               {scorePresentation.label}
             </p>
             <p className="mt-2 text-[9px] text-[#6f6f69]">
-              {summary.securityScore.totalFindings} active findings
+              {summary.securityScore.totalFindings} active{" "}
+              {summary.securityScore.totalFindings === 1
+                ? "finding"
+                : "findings"}
             </p>
           </section>
 
@@ -107,7 +110,7 @@ export function ProjectSecurityOverview({
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <dt className="text-[#667267]">Accepted</dt>
+                <dt className="text-[#667267]">Accepted risk</dt>
                 <dd className="font-mono font-semibold text-[#343431]">
                   {summary.dispositionCounts.accepted}
                 </dd>
@@ -151,6 +154,7 @@ export function ProjectSecurityOverview({
               {summary.priorityFindings.map(({ finding, status }) => {
                 const presentation =
                   findingSeverityPresentation[finding.severity];
+                const targetLabel = getFindingTargetLabel(finding, context);
 
                 return (
                   <div
@@ -163,11 +167,17 @@ export function ProjectSecurityOverview({
                       {presentation.label}
                     </span>
                     <div className="min-w-0 pr-5">
-                      <p className="truncate text-[11px] font-semibold text-[#30302d]">
+                      <p
+                        title={finding.title}
+                        className="truncate text-[11px] font-semibold text-[#30302d]"
+                      >
                         {finding.title}
                       </p>
-                      <p className="mt-0.5 truncate text-[9px] text-[#777770]">
-                        {getFindingTargetLabel(finding, context)}
+                      <p
+                        title={targetLabel}
+                        className="mt-0.5 truncate text-[9px] text-[#777770]"
+                      >
+                        {targetLabel}
                       </p>
                     </div>
                     <span

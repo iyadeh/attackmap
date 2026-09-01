@@ -73,7 +73,20 @@ export function ArchitectureCanvas({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1">
+      <div className="relative min-h-0 flex-1">
+        {nodes.length === 0 ? (
+          <div
+            role="status"
+            className="pointer-events-none absolute left-4 top-4 z-10 max-w-56 border-l border-[#cfcfc9] pl-3"
+          >
+            <p className="text-[11px] font-medium text-[#4e4e49]">
+              Empty architecture
+            </p>
+            <p className="mt-1 text-[9px] leading-4 text-[#85857e]">
+              Add a service from Components to begin modeling.
+            </p>
+          </div>
+        ) : null}
         <ServiceModelContext.Provider value={servicesById}>
           <ReactFlow<ArchitectureNode, Edge>
             nodes={nodes}

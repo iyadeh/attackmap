@@ -85,6 +85,8 @@ function ServiceNodeComponent({ data, selected }: NodeProps<ArchitectureNode>) {
     return null;
   }
 
+  const displayName = service.name.trim() || "Unnamed service";
+
   return (
     <div
       className={`relative border bg-white transition-colors ${
@@ -97,6 +99,8 @@ function ServiceNodeComponent({ data, selected }: NodeProps<ArchitectureNode>) {
         type="target"
         position={Position.Left}
         isConnectable
+        aria-label={`Connection target for ${displayName}`}
+        title={`Connect to ${displayName}`}
         className="!h-2 !w-2 !cursor-crosshair !border-2 !border-white !bg-[#85857e]"
       />
 
@@ -105,8 +109,11 @@ function ServiceNodeComponent({ data, selected }: NodeProps<ArchitectureNode>) {
           <ServiceIcon type={service.type} size={18} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[12px] font-semibold tracking-[-0.01em] text-[#242421]">
-            {service.name || "Unnamed service"}
+          <p
+            title={displayName}
+            className="truncate text-[12px] font-semibold tracking-[-0.01em] text-[#242421]"
+          >
+            {displayName}
           </p>
           <p className="mt-0.5 truncate text-[9px] font-medium uppercase tracking-[0.09em] text-[#7e7e77]">
             {serviceTypeLabels[service.type]}
@@ -130,6 +137,8 @@ function ServiceNodeComponent({ data, selected }: NodeProps<ArchitectureNode>) {
         type="source"
         position={Position.Right}
         isConnectable
+        aria-label={`Connection source for ${displayName}`}
+        title={`Connect from ${displayName}`}
         className="!h-2 !w-2 !cursor-crosshair !border-2 !border-white !bg-[#85857e]"
       />
     </div>

@@ -39,7 +39,7 @@ export function CurrentProjectControls({
       const result = await renameProjectAction(project.id, trimmedName);
 
       if (!result.ok) {
-        setError("Rename failed.");
+        setError(result.error);
         return;
       }
 
@@ -47,7 +47,7 @@ export function CurrentProjectControls({
       setName(result.project.name);
       setMode("idle");
     } catch {
-      setError("Rename failed.");
+      setError("Could not rename project.");
     } finally {
       setPending(false);
     }
@@ -61,13 +61,13 @@ export function CurrentProjectControls({
       const result = await deleteProjectAction(project.id);
 
       if (!result.ok) {
-        setError("Delete failed.");
+        setError(result.error);
         return;
       }
 
       router.replace("/projects");
     } catch {
-      setError("Delete failed.");
+      setError("Could not delete project.");
     } finally {
       setPending(false);
     }
@@ -111,7 +111,11 @@ export function CurrentProjectControls({
           Cancel
         </button>
         {error ? (
-          <span role="alert" className="text-[9px] text-[#913c39]">
+          <span
+            role="alert"
+            title={error}
+            className="max-w-32 truncate text-[9px] text-[#913c39]"
+          >
             {error}
           </span>
         ) : null}
@@ -143,7 +147,11 @@ export function CurrentProjectControls({
           Cancel
         </button>
         {error ? (
-          <span role="alert" className="text-[9px] text-[#913c39]">
+          <span
+            role="alert"
+            title={error}
+            className="max-w-32 truncate text-[9px] text-[#913c39]"
+          >
             {error}
           </span>
         ) : null}

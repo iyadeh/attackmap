@@ -149,16 +149,19 @@ export function ServiceInspector({
   onDelete,
 }: ServiceInspectorProps) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const displayName = service?.name.trim() || "Unnamed service";
 
   return (
     <aside
-      aria-label="Service inspector"
+      aria-label={service ? "Service inspector" : "Architecture inspector"}
       className="min-h-0 overflow-y-auto border-l border-[#dfdfda] bg-white"
     >
       <div className="flex h-11 items-center justify-between border-b border-[#e7e7e2] px-3.5">
-        <h2 className="text-[11px] font-semibold">Service inspector</h2>
+        <h2 className="text-[11px] font-semibold">
+          {service ? "Service inspector" : "Inspector"}
+        </h2>
         <span className="border border-[#deded8] bg-[#f7f7f4] px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[0.08em] text-[#777770]">
-          In memory
+          Live model
         </span>
       </div>
 
@@ -169,10 +172,16 @@ export function ServiceInspector({
               <ServiceIcon type={service.type} size={19} />
             </span>
             <div className="min-w-0">
-              <p className="truncate text-[12px] font-semibold">
-                {service.name || "Unnamed service"}
+              <p
+                title={displayName}
+                className="truncate text-[12px] font-semibold"
+              >
+                {displayName}
               </p>
-              <p className="mt-1 font-mono text-[8px] text-[#85857e]">
+              <p
+                title={service.id}
+                className="mt-1 truncate font-mono text-[8px] text-[#85857e]"
+              >
                 {service.id}
               </p>
             </div>
@@ -347,14 +356,14 @@ export function ServiceInspector({
               weight="bold"
               aria-hidden="true"
             />
-            <p>Changes apply immediately to this in-memory architecture.</p>
+            <p>Changes update the current architecture immediately.</p>
           </div>
 
           <div className="border-t border-[#e7e7e2] py-3.5">
             {confirmingDelete ? (
               <div>
                 <p className="text-[9px] leading-3.5 text-[#6f3f3d]">
-                  Remove this service and its connected edges?
+                  Remove this service and its connections?
                 </p>
                 <div className="mt-2 flex items-center gap-2">
                   <button
@@ -387,10 +396,10 @@ export function ServiceInspector({
       ) : (
         <div className="px-5 py-8 text-center">
           <p className="text-[11px] font-medium text-[#4e4e49]">
-            No service selected
+            No selection
           </p>
           <p className="mt-1.5 text-[9px] leading-4 text-[#85857e]">
-            Select a node on the canvas to inspect its configuration.
+            Select a service or connection on the canvas to inspect it.
           </p>
         </div>
       )}

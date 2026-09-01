@@ -1,5 +1,5 @@
 import { FlowArrow, ShieldCheck } from "@phosphor-icons/react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type {
   ConnectionProtocol,
   ServiceConnection,
@@ -46,7 +46,10 @@ function ConnectionEndpoint({ label, name }: { label: string; name: string }) {
   return (
     <div>
       <p className="mb-1 text-[9px] font-medium text-[#74746d]">{label}</p>
-      <p className="truncate border-l border-[#d5d5cf] py-0.5 pl-2 text-[10px] text-[#353531]">
+      <p
+        title={name}
+        className="truncate border-l border-[#d5d5cf] py-0.5 pl-2 text-[10px] text-[#353531]"
+      >
         {name}
       </p>
     </div>
@@ -61,8 +64,10 @@ export function ConnectionInspector({
   onEncryptedChange,
   onDelete,
 }: ConnectionInspectorProps) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const encryptionIsProtocolDefined =
     connection.protocol === "https" || connection.protocol === "http";
+  const connectionLabel = `${sourceName} to ${targetName}`;
 
   return (
     <aside
@@ -72,7 +77,7 @@ export function ConnectionInspector({
       <div className="flex h-11 items-center justify-between border-b border-[#e7e7e2] px-3.5">
         <h2 className="text-[11px] font-semibold">Connection inspector</h2>
         <span className="border border-[#deded8] bg-[#f7f7f4] px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[0.08em] text-[#777770]">
-          In memory
+          Live model
         </span>
       </div>
 
@@ -82,10 +87,16 @@ export function ConnectionInspector({
             <FlowArrow size={19} weight="regular" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <p className="truncate text-[12px] font-semibold">
-              {sourceName} to {targetName}
+            <p
+              title={connectionLabel}
+              className="truncate text-[12px] font-semibold"
+            >
+              {connectionLabel}
             </p>
-            <p className="mt-1 font-mono text-[8px] text-[#85857e]">
+            <p
+              title={connection.id}
+              className="mt-1 truncate font-mono text-[8px] text-[#85857e]"
+            >
               {connection.id}
             </p>
           </div>
@@ -145,17 +156,41 @@ export function ConnectionInspector({
             weight="bold"
             aria-hidden="true"
           />
-          <p>Changes apply immediately to this in-memory connection.</p>
+          <p>Changes update the current connection immediately.</p>
         </div>
 
         <div className="border-t border-[#e7e7e2] py-3.5">
-          <button
-            type="button"
-            onClick={() => onDelete(connection.id)}
-            className="text-[9px] font-medium text-[#91403d] hover:text-[#6f2e2c]"
-          >
-            Delete connection
-          </button>
+          {confirmingDelete ? (
+            <div>
+              <p className="text-[9px] leading-3.5 text-[#6f3f3d]">
+                Remove this connection?
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(false)}
+                  className="h-7 rounded-[3px] border border-[#d5d5cf] bg-white px-2.5 text-[9px] text-[#575751] hover:bg-[#f7f7f4]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(connection.id)}
+                  className="h-7 rounded-[3px] border border-[#e5c9c8] bg-[#fdf3f3] px-2.5 text-[9px] font-medium text-[#8f3432] hover:bg-[#f9e8e8]"
+                >
+                  Confirm delete
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              className="text-[9px] font-medium text-[#91403d] hover:text-[#6f2e2c]"
+            >
+              Delete connection
+            </button>
+          )}
         </div>
       </form>
     </aside>
