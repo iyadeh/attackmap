@@ -178,9 +178,3 @@ src/
 1. **No Active Scanning / Exploitation:** AttackMap never performs network scans, port knocking, active probes, or credential stuffing. It is strictly an architectural threat modeling tool.
 2. **Deterministic & Verifiable:** Rule evaluations are pure functions without non-deterministic LLM calls or hidden heuristics. The same model always yields the exact same findings.
 3. **Defense-in-Depth Persistence:** Relational integrity constraints (foreign keys with cascade deletion, composite primary keys, and checks) prevent orphan edges and self-loops.
-
----
-
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).
