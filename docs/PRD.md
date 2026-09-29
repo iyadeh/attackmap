@@ -247,29 +247,21 @@ Primary navigation:
 
 ```text
 AttackMap
-
-Projects
-Project Workspace
-  ├── Architecture
-  ├── Findings
-  └── Overview
+├── /projects                        (Project List & Creation)
+└── /projects/[projectId]            (Project Workspace)
+      ├── [Tab] Architecture        (Canvas, Component Palette, Inspectors)
+      ├── [Tab] Overview            (Security Posture Summary & Priority Risks)
+      └── [Tab] Findings            (Findings List, Severity Filters & Triage)
 ```
 
-Untuk MVP, navigation sebaiknya sederhana.
+Untuk MVP, workspace menggunakan **Single-Page Workspace dengan Tab Switcher** di dalam route `/projects/[projectId]`.
 
-Main sidebar:
+Navigasi antar-tab (`Architecture`, `Overview`, `Findings`) tidak me-reload atau me-unmount halaman, sehingga instance dan state visual canvas `@xyflow/react` (posisi zoom, pan, seleksi node) tetap terjaga secara live.
+
+Main header navigation:
 
 ```text
-AttackMap
-
-Projects
-
-Current Project
-Overview
-Architecture
-Findings
-
-Settings
+AttackMap  /  [Project Name]  [Persistence Status]  [Security Score]  [Tabs: Architecture | Overview | Findings]
 ```
 
 ---
@@ -679,267 +671,58 @@ type SecurityRule = {
 
 # 19. Initial Security Rules
 
-MVP harus memiliki minimal 10–15 security rules.
+MVP memiliki 10 aturan keamanan deterministik aktif (`AM-001` s/d `AM-010`).
 
-## Rule 1
+Setiap rule memiliki ID unik stabil (`AM-xxx`) dan menghasilkan deterministic finding.
 
-### Public Database Exposure
+### Active MVP Rules Baseline:
 
-Condition:
-
-```text
-type = database
-AND
-exposure = public
-```
-
-Severity:
-
-**Critical**
-
-Finding:
-
-`Database exposed to public network`
-
-Recommendation:
-
-Restrict database access to private/internal networks.
+| Rule ID | Title | Severity | Target | Condition Summary |
+|---|---|---|---|---|
+| **AM-001** | Public database exposure | Critical | Service | `database` dengan `exposure = public` |
+| **AM-002** | Public API without authentication | Critical | Service | `api` publik dengan `authentication = none` |
+| **AM-003** | Missing authorization | High | Service | `api`/`backend`/`gateway` berautentikasi tanpa otorisasi |
+| **AM-004** | Sensitive service without encryption in transit | High | Service | `sensitiveData = true` dengan `encryptionInTransit = false` |
+| **AM-005** | Sensitive database without encryption at rest | High | Service | `database` sensitif dengan `encryptionAtRest = false` |
+| **AM-006** | Public API without rate limiting | Medium | Service | `api`/`gateway` publik tanpa `rateLimiting` |
+| **AM-007** | Unencrypted HTTP connection | Medium | Connection | `protocol = http` dan `encrypted = false` |
+| **AM-008** | Sensitive data over unencrypted connection | High | Connection | Connection unencrypted melibatkan service sensitif |
+| **AM-009** | Public sensitive object storage | Critical | Service | `storage` publik yang menangani `sensitiveData` |
+| **AM-010** | Public authentication service without rate limiting | High | Service | `auth` publik tanpa `rateLimiting` |
 
 ---
 
-## Rule 2
-
-### Public API Without Authentication
-
-Condition:
-
-```text
-type = API
-AND
-exposure = public
-AND
-authentication = none
-```
-
-Severity:
-
-**Critical**
-
----
-
-## Rule 3
-
-### Missing Authorization
-
-Condition:
-
-```text
-type = API
-AND
-authentication != none
-AND
-authorization = none
-```
-
-Severity:
-
-**High**
-
----
-
-## Rule 4
-
-### Sensitive Data Without Encryption
-
-Condition:
-
-```text
-sensitiveData = true
-AND
-encryptionInTransit = false
-```
-
-Severity:
-
-**High**
-
----
-
-## Rule 5
-
-### Database Without Encryption At Rest
-
-Condition:
-
-```text
-type = database
-AND
-sensitiveData = true
-AND
-encryptionAtRest = false
-```
-
-Severity:
-
-**High**
-
----
-
-## Rule 6
-
-### Public API Without Rate Limiting
-
-Condition:
-
-```text
-type = API
-AND
-exposure = public
-AND
-rateLimiting = false
-```
-
-Severity:
-
-**Medium**
-
----
-
-## Rule 7
-
-### HTTP Communication
-
-Condition:
-
-```text
-connection.protocol = http
-```
-
-Severity:
-
-**Medium**
-
----
-
-## Rule 8
-
-### Public Object Storage
-
-Condition:
-
-```text
-type = storage
-AND
-exposure = public
-AND
-sensitiveData = true
-```
-
-Severity:
-
-**Critical**
-
----
-
-## Rule 9
-
-### Internal Service Publicly Exposed
-
-Condition:
-
-```text
-type = backend
-AND
-exposure = public
-```
-
-Severity:
-
-**Medium**
-
----
-
-## Rule 10
-
-### Sensitive Third-Party Data Flow
-
-Condition:
-
-```text
-sensitive data
-→
-third party
-```
-
-Severity:
-
-**Medium**
-
-Finding:
-
-`Sensitive data is shared with a third-party service`
-
----
-
-## Rule 11
-
-### Public Authentication Service Without Rate Limiting
-
-Severity:
-
-**High**
-
----
-
-## Rule 12
-
-### Authentication Over Unencrypted Channel
-
-Severity:
-
-**Critical**
+### Planned / Backlog Rules:
+
+Aturan berikut direncanakan untuk iterasi pasca-baseline:
+
+* **Rule 9 (Planned): Internal Service Publicly Exposed**  
+  `type = backend AND exposure = public` (Severity: Medium)
+* **Rule 10 (Planned): Sensitive Third-Party Data Flow**  
+  Arsitektur mendeteksi data flow sensitif menuju service bertipe `third_party` (Severity: Medium)
+* **Rule 12 (Planned): Authentication Over Unencrypted Channel**  
+  Trafik menuju `auth` service melewati connection yang tidak terenkripsi (Severity: Critical — sebagian termitigasi oleh AM-007 & AM-008)
 
 ---
 
 # 20. Findings
 
-Findings page menampilkan seluruh risk yang ditemukan.
+Findings page menampilkan seluruh risk yang ditemukan oleh deterministic risk engine.
 
-## Finding Structure
+## Finding Structure (Pure Derived State)
+
+Findings dihitung secara dinamis saat runtime dari services dan connections (tidak disimpan sebagai tabel statis di database):
 
 ```ts
 type Finding = {
-  id: string
-
-  projectId: string
-  nodeId?: string
-  connectionId?: string
-
-  ruleId: string
-
+  id: string              // Deterministic: {ruleId}:{service|connection}:{targetId}
+  ruleId: string          // AM-001 s/d AM-010
   title: string
-
-  severity:
-    | "critical"
-    | "high"
-    | "medium"
-    | "low"
-
+  severity: "critical" | "high" | "medium" | "low"
   description: string
-
-  impact: string
-
   recommendation: string
-
-  status:
-    | "open"
-    | "accepted"
-    | "resolved"
-
-  references?: {
-    name: string
-    url?: string
-  }[]
+  serviceId?: string      // ID service yang terdampak (bila relevan)
+  connectionId?: string   // ID connection yang terdampak (bila relevan)
 }
 ```
 
@@ -993,32 +776,25 @@ Recommendation
 
 Implement resource-level authorization using RBAC,
 ABAC, or policy-based access control.
-
-References
-
-OWASP API Security
-Broken Object Level Authorization
 ```
 
 ---
 
-# 23. Finding Status
+# 23. Finding Dispositions & Triage
 
-User dapat mengubah status finding.
+User dapat melakukan triage terhadap temuan keamanan.
 
-### Open
+### Open (Default)
+Risk aktif dan belum ditangani. Ini adalah status default untuk semua temuan yang dihasilkan oleh engine.
 
-Risk belum ditangani.
+### Accepted Risk
+User memahami risiko teknis tetapi secara sadar memutuskan menerima risiko tersebut untuk sementara atau karena konteks operasional tertentu.
+* Mewajibkan pengisian **Acceptance Rationale** (alasan penerimaan risiko non-kosong, 1–1000 karakter).
+* Disimpan secara persisten di database tabel `finding_dispositions` berdasarkan `(projectId, findingId)`.
+* User dapat melakukan **Reopen** sewaktu-waktu untuk mengembalikan status finding menjadi Open.
 
-### Accepted
-
-User memahami risk tetapi memutuskan menerima risk tersebut.
-
-### Resolved
-
-Architecture sudah diperbaiki sehingga rule tidak lagi terpenuhi.
-
-Jika underlying configuration berubah sehingga finding tidak lagi valid, AttackMap dapat otomatis menandainya sebagai resolved.
+### Implicit Auto-Resolve
+Jika arsitektur atau konfigurasi diperbaiki sehingga aturan keamanan tidak lagi terpenuhi, finding tersebut secara otomatis tidak lagi dihasilkan oleh risk engine. Tidak diperlukan mutasi status manual untuk "resolved".
 
 ---
 
@@ -1036,9 +812,7 @@ Default:
 
 `100`
 
-Setiap finding mengurangi score.
-
-Contoh weighting:
+Setiap finding aktif mengurangi score:
 
 ```text
 Critical = -20
@@ -1050,6 +824,9 @@ Low      = -2
 Score minimum:
 
 `0`
+
+### Prinsip Raw Technical Score
+Security Score merefleksikan **postur keamanan teknis riil**. Mengubah status finding menjadi *Accepted Risk* mendokumentasikan keputusan manajemen risiko, tetapi **TIDAK mengurangi pengurangan penalti score** (score tetap dihitung dari total seluruh active technical findings).
 
 ---
 
@@ -1227,111 +1004,93 @@ Authentication bukan core feature AttackMap.
 
 # 32. Persistence
 
-Architecture harus tersimpan ke database.
+Arsitektur dan data project tersimpan ke PostgreSQL menggunakan snapshot transaction.
 
 Minimal entities:
 
 ```text
 Project
-ServiceNode
+ServiceNode            (mencakup metadata keamanan dan koordinat visual positionX/Y)
 ServiceConnection
-Finding
+FindingDisposition     (triage status 'accepted' dan rationale)
 ```
 
-Suggested relational structure:
+Relational structure:
 
 ```text
-Project
-  │
-  ├── ServiceNode
-  │
-  ├── ServiceConnection
-  │
-  └── Finding
+projects
+  │  (id: uuid PK)
+  ├── services
+  │     (PK: project_id + id, FK: project_id -> projects.id CASCADE)
+  ├── service_connections
+  │     (PK: project_id + id, FK: project_id -> projects.id CASCADE, FK -> services CASCADE)
+  └── finding_dispositions
+        (PK: project_id + finding_id, FK: project_id -> projects.id CASCADE)
 ```
 
+> **Catatan Arsitektur:** Tabel `findings` tidak disimpan secara persisten di database. Temuan keamanan (*findings*) adalah *pure derived state* yang dievaluasi ulang secara deterministik dari node dan connection setiap kali arsitektur berubah. Database hanya menyimpan keputusan penanganan risiko manusia (`finding_dispositions`) beserta alasannya.
+
 ---
 
-# 33. Recommended Tech Stack
+# 33. Tech Stack
 
 ## Framework
-
-Next.js
+Next.js (App Router, React Compiler enabled)
 
 ## Language
-
-TypeScript
+TypeScript (Strict Mode)
 
 ## Styling
-
-Tailwind CSS
+Tailwind CSS v4 (Industrial warm monochrome palette)
 
 ## Architecture Canvas
-
-React Flow
+`@xyflow/react` (React Flow v12)
 
 ## Database
-
-PostgreSQL
+PostgreSQL (via `postgres` driver)
 
 ## ORM
-
-Drizzle ORM
+Drizzle ORM & Drizzle Kit
 
 ## Validation
-
-Zod
+Hand-written Typed Parsers & Invariant Mappers (tanpa dependensi eksternal, sesuai prinsip *strict dependency discipline*)
 
 ## Icons
-
-Lucide
+Phosphor Icons (`@phosphor-icons/react` — bobot Bold/Technical)
 
 ---
 
-# 34. Suggested Application Structure
+# 34. Application Structure
 
 ```text
 src/
 
 app/
+  actions.ts                     // Server Actions (Client/Server boundary)
+  layout.tsx                     // Root layout, Geist fonts, global CSS
+  page.tsx                       // Redirect -> /projects
   projects/
-  project/
-    [id]/
-      overview/
-      architecture/
-      findings/
+    page.tsx                     // Project list & creation
+    [projectId]/
+      page.tsx                   // Workspace page (Architecture, Overview, Findings tabs)
+      not-found.tsx              // 404 handler for invalid project IDs
 
 components/
-
-  architecture/
-    architecture-canvas.tsx
-    service-node.tsx
-    connection-edge.tsx
-    service-panel.tsx
-
-  findings/
-    finding-list.tsx
-    finding-card.tsx
-    finding-detail.tsx
-
-  dashboard/
-    security-score.tsx
-    finding-summary.tsx
+  architecture/                  // Canvas, ServiceNode, Palette, Inspectors, Autosave
+  findings/                      // Findings view, detail, disposition form, score badge
+  overview/                      // Security posture summary, priority findings list
+  projects/                      // Project list view, rename/delete controls
 
 lib/
-
-  risk-engine/
-    engine.ts
-    rules.ts
-    scoring.ts
-
-  db/
-    schema.ts
+  risk-engine/                   // Deterministic evaluation engine, rules (AM-001..AM-010), scoring
+  architecture/                  // Autosave coordinator, service factory, connection factory
+  db/                            // Drizzle schema, client, snapshot mappers, persistence modules
+  findings/                      // Finding triage logic, rationale validator
+  overview/                      // Overview metrics & priority ranking calculator
 
 types/
-
-  architecture.ts
-  security.ts
+  architecture.ts                // Project, ServiceNode, ServiceConnection, Snapshot domain types
+  security.ts                    // Finding, FindingDisposition, SecurityScoreResult types
 ```
 
 ---
@@ -1697,38 +1456,39 @@ Risk engine harus memiliki unit tests.
 
 ---
 
-## Phase 4 — Findings UI
+## Phase 4 — Findings UI & Triage
 
 Implement:
 
 - finding list;
-- severity filter;
+- severity filter & count summaries;
 - finding detail;
-- recommendations.
+- recommendations;
+- accepted risk triage workflow (with non-empty rationale & reopen support).
 
 ---
 
-## Phase 5 — Persistence
+## Phase 5 — Persistence & Autosave
 
 Tambahkan:
 
-- PostgreSQL;
-- Drizzle;
-- project persistence;
-- architecture persistence.
+- PostgreSQL database & Drizzle ORM schema;
+- multi-project CRUD management & dynamic routing (`/projects/[projectId]`);
+- transactional architecture snapshot save & load;
+- debounced project-scoped autosave coordinator.
 
 ---
 
-## Phase 6 — Polish
+## Phase 6 — Polish & Overview
 
 Tambahkan:
 
-- empty states;
-- loading states;
-- keyboard UX;
-- confirmation dialogs;
-- responsive behavior;
-- error states.
+- project security overview (metrics breakdown & top priority findings);
+- empty states (empty canvas, empty findings, empty projects);
+- persistence status clarity (saved, saving, unsaved, error indicators);
+- confirmation dialogs for destructive actions (delete service/connection/project);
+- accessibility basics (ARIA labels, live regions, semantic controls);
+- copy consistency & overflow handling.
 
 ---
 
