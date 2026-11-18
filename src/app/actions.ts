@@ -19,6 +19,7 @@ import {
   listProjects,
   renameProject,
 } from "@/lib/db/project-persistence";
+import { demoArchitecture, DEMO_PROJECT_ID } from "@/lib/architecture/demo-architecture";
 import type { Project, ProjectArchitecture } from "@/types/architecture";
 import type { FindingDisposition } from "@/types/security";
 
@@ -58,6 +59,10 @@ export async function saveArchitectureAction(
   projectId: unknown,
   input: unknown,
 ): Promise<SaveArchitectureActionResult> {
+  if (projectId === DEMO_PROJECT_ID) {
+    return { ok: true };
+  }
+
   if (!isProjectId(projectId)) {
     return { ok: false, error: "Invalid project." };
   }
@@ -76,6 +81,10 @@ export async function saveArchitectureAction(
 export async function loadArchitectureAction(
   projectId: unknown,
 ): Promise<LoadArchitectureActionResult> {
+  if (projectId === DEMO_PROJECT_ID) {
+    return { ok: true, architecture: demoArchitecture };
+  }
+
   if (!isProjectId(projectId)) {
     return { ok: true, architecture: null };
   }
@@ -94,6 +103,10 @@ export async function loadArchitectureAction(
 export async function loadFindingDispositionsAction(
   projectId: unknown,
 ): Promise<LoadFindingDispositionsActionResult> {
+  if (projectId === DEMO_PROJECT_ID) {
+    return { ok: true, dispositions: [] };
+  }
+
   try {
     return {
       ok: true,
@@ -122,6 +135,18 @@ export async function acceptFindingRiskAction(
     };
   }
 
+  if (projectId === DEMO_PROJECT_ID) {
+    return {
+      ok: true,
+      disposition: {
+        findingId: input.findingId,
+        status: "accepted",
+        rationale: input.rationale,
+        updatedAt: new Date(),
+      },
+    };
+  }
+
   try {
     const disposition = await acceptFindingRisk(
       projectId,
@@ -143,6 +168,10 @@ export async function reopenFindingAction(
   projectId: unknown,
   findingId: unknown,
 ): Promise<ReopenFindingActionResult> {
+  if (projectId === DEMO_PROJECT_ID) {
+    return { ok: true };
+  }
+
   try {
     const reopened = await reopenFinding(projectId, findingId);
 
@@ -158,11 +187,13 @@ export async function reopenFindingAction(
 
 export async function listProjectsAction(): Promise<ListProjectsActionResult> {
   try {
-    return { ok: true, projects: await listProjects() };
-  } catch (error) {
-    console.error("Failed to list projects.", error);
+    const projects = await listProjects();
 
-    return { ok: false, error: "Could not load projects." };
+    return { ok: true, projects: [demoArchitecture.project, ...projects] };
+  } catch (error) {
+    console.error("Failed to list projects, using demo fallback.", error);
+
+    return { ok: true, projects: [demoArchitecture.project] };
   }
 }
 

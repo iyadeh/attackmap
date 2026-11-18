@@ -2,7 +2,22 @@
 
 > **Developer-focused application security architecture tool with deterministic risk analysis and security scoring.**
 
+<p align="center">
+  <img src="./public/demo.gif" alt="AttackMap Interactive Architecture Workspace Demo" width="100%" style="border-radius: 6px; border: 1px solid #dfdfda;" />
+</p>
+
 AttackMap is an interactive modeling canvas designed for developers, architects, and security engineers. Instead of relying on static spreadsheets or disconnected diagrams, AttackMap evaluates your application's architecture declaratively and deterministically—flagging structural attack surfaces, calculating an objective security score, and managing risk acceptance in real time.
+
+---
+
+## 💡 Why AttackMap?
+
+Traditional threat modeling approaches are fractured:
+* **Passive Whiteboards (Draw.io / Miro):** Intuitive for flowcharts, but completely blind to security vulnerabilities and protocol flaws.
+* **Legacy Threat Modeling Tools (e.g. MS TMT):** Rigid desktop-only interfaces with obsolete rule definitions detached from modern cloud-native architectures.
+* **Spreadsheet Matrices:** Tedious to maintain, easily outdated, and provide zero topological context of how services communicate.
+
+**AttackMap bridges this gap:** It pairs the fluid developer experience of modern graph canvases (`@xyflow/react`) with an **immutable, pure functional risk evaluation engine**. As you connect services and configure protocols, AttackMap continuously audits your topology, deducts points based on real attack vectors, and records auditable risk rationales.
 
 ---
 
@@ -16,6 +31,22 @@ AttackMap is an interactive modeling canvas designed for developers, architects,
 * **Transactional Snapshot Persistence:** Atomic PostgreSQL saves via Drizzle ORM. Node visual positions (X/Y), properties, and connections persist together in isolated transactions.
 * **Debounced Autosave Coordinator:** Background autosave with a 1500ms debounce window, JSON fingerprint diffing, request coalescing, and generation tracking to eliminate race conditions.
 * **Compact Security Overview:** Real-time derived posture summaries, severity distributions, and top 5 priority risks for quick executive review.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Dev as Developer / Architect
+    participant Canvas as Interactive Canvas (@xyflow)
+    participant Coord as Autosave Coordinator
+    participant Engine as Deterministic Risk Engine
+    participant DB as PostgreSQL (Drizzle ORM)
+
+    Dev->>Canvas: Drag, connect, or edit service nodes
+    Canvas->>Coord: Emit state snapshot (1500ms debounce)
+    Coord->>Engine: Run functional evaluation (AM-001..AM-010)
+    Engine-->>Canvas: Real-time security score (0-100) & active badges
+    Coord->>DB: Atomic transactional persistence
+```
 
 ---
 
@@ -178,3 +209,23 @@ src/
 1. **No Active Scanning / Exploitation:** AttackMap never performs network scans, port knocking, active probes, or credential stuffing. It is strictly an architectural threat modeling tool.
 2. **Deterministic & Verifiable:** Rule evaluations are pure functions without non-deterministic LLM calls or hidden heuristics. The same model always yields the exact same findings.
 3. **Defense-in-Depth Persistence:** Relational integrity constraints (foreign keys with cascade deletion, composite primary keys, and checks) prevent orphan edges and self-loops.
+
+---
+
+## 🗺️ Roadmap & Upcoming Milestones
+
+- [x] **v1.0 (Current MVP — Locked & Verified Baseline):**
+  - Interactive `@xyflow` node modeling & protocol-aware connections.
+  - Deterministic evaluation for 10 baseline security rules (`AM-001`–`AM-010`).
+  - PostgreSQL transaction persistence via Drizzle ORM + debounced autosave.
+  - Risk acceptance triage with mandatory rationale tracking.
+  - Demo architecture workspace for zero-friction evaluation.
+- [ ] **v1.1 (Planned Evolution):**
+  - Expanded rule catalog (`AM-011`–`AM-020`: CORS misconfigurations, SSRF sinks, missing audit logging).
+  - Export architecture as Terraform / OpenTofu infrastructure-as-code skeleton.
+  - MITRE ATT&CK & OWASP ASVS compliance tag mapping.
+- [ ] **v1.2 (Long-term Vision):**
+  - Multi-user real-time architecture collaboration via WebSockets.
+  - CI/CD security architecture drift detection.
+
+---
